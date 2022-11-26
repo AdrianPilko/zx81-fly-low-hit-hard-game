@@ -64,6 +64,16 @@ groundLevelIndex
     DEFB 0,0
 groundLevelMemoryLocationNow
     DEFB 0,0
+row_counter    
+    DEFB 0,0
+col_counter        
+    DEFB 0,0
+screen_content_at_current
+    DEFB 0    
+lastTestCol
+    DEFB 0,0
+currentRowOffset    
+    DEFB 0,0
 crash_message_txt
 	DEFB	_G,_A,_M,_E,__,_O,_V,_E,_R,$ff	
 title_screen_txt
@@ -305,10 +315,96 @@ initialiseGround
 	ld (hl),a
 	ld (var_ship_pos),hl ;save ship posn
 
-principalloop
-    jp principalloop
+    ld a,32
+    ld (lastTestCol), a
+
+mainGameLoop
+
+    ;; scroll ground left
+    
+    ; as we're scrolling whole screen left, the ship has to be moved right one column to maintain it's position
+    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
+    inc hl
+	ld a,SHIP_CHARACTER_CODE 
+	ld (hl),a
+    
+    
+      ; test add character at top 
+     
+    ld hl,(D_FILE) 
+	ld de, (lastTestCol)
+	add hl, de	
+	ld a,138 
+	ld (hl),a 
+    
+    ld a, (lastTestCol)
+    dec a
+    cp 1
+    jp nz, NoResetlastTestCol
+    ld hl,(D_FILE) 
+	ld de, 32
+	add hl, de	
+	ld a,136 
+	ld (hl),a
+    ld a, 32    
+NoResetlastTestCol
+    ld (lastTestCol),a 
+    
+    
+    ld b, 24
+    ld hl,(D_FILE)          
+    inc hl
+    ld (currentRowOffset), hl
+screen_scroll_left_row       
+    push bc    
+    ld b, 31
+    ld a, 0
+    ld (col_counter), a
+screen_scroll_left_col           
+
+    inc a
+    ld (col_counter), a
+    
+    ;ld hl,(D_FILE)          ; get the value at row and column pos + 1, then move to current row and column
+    ld hl,(currentRowOffset)          ; get the value at row and column pos + 1, then move to current row and column
+    ld de, (col_counter)
+    add hl, de
+    ld a, (hl)
+    ld (screen_content_at_current), a    
+        
+    ld a, (col_counter)
+    dec a
+    ld (col_counter), a
+
+    ld hl,(D_FILE)          
+    ld de, (col_counter)
+    add hl, de
+    ld a, (screen_content_at_current)   
+    ld (hl), a
+    
+    
+    ld a, (col_counter)
+    inc a
+    ld (col_counter), a
+    
+    djnz screen_scroll_left_col    
+
+;endDEBUG
+;    jp endDEBUG
+   ld hl,(currentRowOffset)
+   ld de, 33
+   add hl, de
+   ld (currentRowOffset), hl
+   pop bc
+   djnz screen_scroll_left_row
+        
+
+    ;; keyboard OR joystick input
+    
+    ;; move ship up / down
 
 
+    
 
     ;ld a, h
     ;call hprint    
@@ -321,48 +417,49 @@ principalloop
 
 
 
-; preWaitloop
-	; ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
-	; add a,1	
-	; daa									; z80 daa instruction realigns for BCD after add or subtract
-	; ld (score_mem_tens),a	
-	; cp 153
-	; jr z, addOneToHund
-	; jr skipAddHund
-; addOneToHund
-	; ld a, 0
-	; ld (score_mem_tens), a
-    ; ld a, (score_mem_hund)
-	; add a, 1
-	; daa
-	; ld (score_mem_hund), a
-; skipAddHund	
+preWaitloop
+	ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
+	add a,1	
+	daa									; z80 daa instruction realigns for BCD after add or subtract
+	ld (score_mem_tens),a	
+	cp 153
+	jr z, addOneToHund
+	jr skipAddHund
+addOneToHund
+	ld a, 0
+	ld (score_mem_tens), a
+    ld a, (score_mem_hund)
+	add a, 1
+	daa
+	ld (score_mem_hund), a
+skipAddHund	
 
-; printScoreInGame
-	; ld b, 21			; b is row to print in
-	; ld c, 1			; c is column
-    ; ld a, (score_mem_hund) ; load hundreds
-	; call printByte    
-	; ld b, 21			; b is row to print in
-	; ld c, 3			; c is column
-	; ld a, (score_mem_tens) ; load tens		
-	; call printByte
+printScoreInGame
+	ld b, 21		; b is row to print in
+	ld c, 1			; c is column
+    ld a, (score_mem_hund) ; load hundreds
+	call printByte    
+	ld b, 21			; b is row to print in
+	ld c, 3			; c is column
+	ld a, (score_mem_tens) ; load tens		
+	call printByte
 
-	; ld bc, (speedUpLevelCounter)
-	; ld hl, (speedUpLevelCounter)   ; makes it more difficult as you progress
-	; ld a, h
-	; cp 0
-	; jr z, waitloop
-	; dec hl 
-	; ld (speedUpLevelCounter), hl
+    ld bc, (speedUpLevelCounter)
+	ld hl, (speedUpLevelCounter)   ; makes it more difficult as you progress
+	ld a, h
+	cp 0
+	jr z, waitloop
+	dec hl 
+	ld (speedUpLevelCounter), hl
 
-	; ld bc, (speedUpLevelCounter)
-; waitloop
-	; dec bc
-	; ld a,b
-	; or c
-	; jr nz, waitloop
-	; jp principalloop
+	ld bc, (speedUpLevelCounter)
+    ;ld bc, $ffff
+waitloop
+	dec bc
+	ld a,b
+	or c
+	jr nz, waitloop
+	jp mainGameLoop
 	
 ; gameover
 	; ld bc,10
