@@ -315,6 +315,15 @@ initialiseGround
 	ld (hl),a
 	ld (var_ship_pos),hl ;save ship posn
 
+
+    ; test add character at top (remove later)
+     
+    ld hl,(D_FILE) 
+	ld de, 18
+	add hl, de	
+	ld a,128 
+	ld (hl),a 
+    
     ld a,32
     ld (lastTestCol), a
 
@@ -327,46 +336,26 @@ mainGameLoop
     inc hl
 	ld a,SHIP_CHARACTER_CODE 
 	ld (hl),a
+       
     
-    
-      ; test add character at top 
-     
-    ld hl,(D_FILE) 
-	ld de, (lastTestCol)
-	add hl, de	
-	ld a,138 
-	ld (hl),a 
-    
-    ld a, (lastTestCol)
-    dec a
-    cp 1
-    jp nz, NoResetlastTestCol
-    ld hl,(D_FILE) 
-	ld de, 32
-	add hl, de	
-	ld a,136 
-	ld (hl),a
-    ld a, 32    
-NoResetlastTestCol
-    ld (lastTestCol),a 
-    
-    
-    ld b, 24
+    ld b, 22
     ld hl,(D_FILE)          
     inc hl
     ld (currentRowOffset), hl
 screen_scroll_left_row       
     push bc    
-    ld b, 31
-    ld a, 0
-    ld (col_counter), a
-screen_scroll_left_col           
-
-    inc a
-    ld (col_counter), a
+    ld b, 30
+    ld c, 0
+    xor a                  ; a is set to zero (z80 fastest way to zero a number (4 clock cycles (T-states))http://z80-heaven.wikidot.com/instructions-set:xor#toc4
+    inc a                  ; increment the column count: set to 1
+    inc a                  ; increment the column count: set to 2
+    ld (col_counter), a    ; store column count
     
-    ;ld hl,(D_FILE)          ; get the value at row and column pos + 1, then move to current row and column
-    ld hl,(currentRowOffset)          ; get the value at row and column pos + 1, then move to current row and column
+screen_scroll_left_col           
+        
+    ; the idea is to go from left to right of screen moving each block at it's current location to the left by 1
+    ; do each column by row
+    ld hl,(currentRowOffset) ; get the value at row and column pos + 1, then move to current row and column
     ld de, (col_counter)
     add hl, de
     ld a, (hl)
@@ -376,16 +365,16 @@ screen_scroll_left_col
     dec a
     ld (col_counter), a
 
-    ld hl,(D_FILE)          
+    ld hl,(currentRowOffset) 
     ld de, (col_counter)
     add hl, de
     ld a, (screen_content_at_current)   
     ld (hl), a
-    
-    
-    ld a, (col_counter)
+
+    ld a, (col_counter)    ; load column count
+    inc a                  ; increment the column count
     inc a
-    ld (col_counter), a
+    ld (col_counter), a    ; store column count
     
     djnz screen_scroll_left_col    
 
