@@ -322,13 +322,7 @@ initialiseGround
 mainGameLoop
 
     ;; scroll ground left
-    
-    ; as we're scrolling whole screen left, the ship has to be moved right one column to maintain it's position
-    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
-    inc hl
-	ld a,SHIP_CHARACTER_CODE 
-	ld (hl),a
-       
+          
     
     ld b, 22
     ld hl,(D_FILE)          
@@ -379,6 +373,14 @@ screen_scroll_left_col
    pop bc
    djnz screen_scroll_left_row
 
+    ; as we scrolled whole screen left, the ship has to be moved right one column to maintain it's position
+    ;; even without user input
+    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
+    inc hl
+	ld a,SHIP_CHARACTER_CODE 
+	ld (hl),a
+
+
 ;; before we add the next ground block at the far right we need to zero the column to preven block 
 ;;drag over all the columns
     ld b, 20     
@@ -421,8 +423,57 @@ zeroLastColumnLoop
     ;; keyboard OR joystick input
     
     ;; move ship up / down
+    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 3, a					        ; N
+    jp z, drawDown
+    
+    ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		
+    bit 2, a					        ; X
+    jp z, drawUp  
+
+    jp afterDrawUpDown  ; no key pressed ship move
 
 
+drawDown    
+    ;overrite existing ship pos with blank
+    ld hl,(var_ship_pos)
+	xor 0
+	ld (hl),a
+    
+    ;ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
+    ld de,32
+    add hl, de
+    ld (var_ship_pos), hl    
+	ld a,SHIP_CHARACTER_CODE 
+	ld (hl),a
+    
+    jp afterDrawUpDown
+    
+drawUp
+    ;overrite existing ship pos with blank
+    ld (var_ship_pos), hl    
+	xor 0
+	ld (hl),a
+    
+    ;ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
+    
+    ; if only there was sub hl, de 16bit subract
+    ld de,32
+    ld a, h
+    sub d
+    ld h, d
+    
+    ld a,l
+    sub e
+    ld l, a
+    
+    ld (var_ship_pos), hl    
+	ld a,SHIP_CHARACTER_CODE 
+	ld (hl),a
+    
+afterDrawUpDown
     
 
     ;ld a, h
