@@ -70,8 +70,6 @@ col_counter
     DEFB 0,0
 screen_content_at_current
     DEFB 0    
-lastTestCol
-    DEFB 0,0
 currentRowOffset    
     DEFB 0,0
 crash_message_txt
@@ -301,11 +299,8 @@ initialiseGround
   
     ld a, GROUND_CHARACTER_CODE
     ld (hl),a    
-   
-    ;; now scroll the screen to the left by one
-    ;; TODO
     
-	djnz initialiseGround
+	djnz initialiseGround    ; djnz decrements b and jumps if not zero
 
 	;;;;;;;;;;;;;;;initialise ship
 	ld hl,(D_FILE) 
@@ -318,15 +313,12 @@ initialiseGround
 
     ; test add character at top (remove later)
      
-    ld hl,(D_FILE) 
-	ld de, 18
-	add hl, de	
-	ld a,128 
-	ld (hl),a 
+;    ld hl,(D_FILE) 
+;	ld de, 725
+;	add hl, de	
+;	ld a,128 
+;	ld (hl),a 
     
-    ld a,32
-    ld (lastTestCol), a
-
 mainGameLoop
 
     ;; scroll ground left
@@ -386,6 +378,46 @@ screen_scroll_left_col
    ld (currentRowOffset), hl
    pop bc
    djnz screen_scroll_left_row
+
+;; before we add the next ground block at the far right we need to zero the column to preven block 
+;;drag over all the columns
+    ld b, 20     
+    ld hl,(D_FILE)
+    inc hl
+    ld de, 31   
+    add hl, de	
+zeroLastColumnLoop    	
+	xor a    ; character zero blank space
+	ld (hl),a
+    ld de, 33
+    add hl,de
+    djnz zeroLastColumnLoop    
+
+
+;;; now reuse some of the code from initialiseing the gorund in a one shot to draw next ground
+    ld de, (groundLevelMemoryLocationNow)
+    ld a,(de)      
+    ld l, a        
+    inc de         
+    ld a, (de)
+    ld h, a    
+    inc de   ; increment again to get to the next location
+    ld (groundLevelMemoryLocationNow), de
+    
+    push hl         ;; you can't just do "ld hl, de", that instruction doesn't exist, 
+                    ;; would be too easy, so have to use stack "push and pop"
+    pop de
+
+    ld hl,(D_FILE) 
+
+    add hl,de       ;; add the start of display memory to the offset 
+                    ;; (note the groundLevelMemory already has the plus 1 added to push one after D_FILE)
+  
+    ld a, GROUND_CHARACTER_CODE
+    ld (hl),a    
+      
+    
+;;;;;;;;;;;;;;;    
         
 
     ;; keyboard OR joystick input
