@@ -72,10 +72,12 @@ screen_content_at_current
     DEFB 0    
 currentRowOffset    
     DEFB 0,0
+vertPosition    
+    DEFB 0,0
 crash_message_txt
 	DEFB	_G,_A,_M,_E,__,_O,_V,_E,_R,$ff	
 title_screen_txt
-	DEFB	_Z,_X,_8,_1,__,_F,_L,_Y,26,__,_L,_O,_W,__,_H,_I,_T,__,_H,_A,_R,_D,$ff
+	DEFB	_Z,_X,_8,_1,__,_F,_L,_Y,__,_L,_O,_W,26,__,_H,_I,_T,__,_H,_A,_R,_D,$ff
 keys_screen_txt
 	DEFB	_S,__,_T,_O,__,_S,_T,_A,_R,_T,26,__,_A,__,_U,_P,__,26,_Z,__,_D,_O,_W,_N,$ff
 keys_screen_txt_2
@@ -309,6 +311,9 @@ initialiseGround
 	ld a,SHIP_CHARACTER_CODE 
 	ld (hl),a
 	ld (var_ship_pos),hl ;save ship posn
+    
+    ld a, 10 
+    ld (vertPosition),a
 
 
     ; test add character at top (remove later)
@@ -322,23 +327,31 @@ initialiseGround
 mainGameLoop
 
     ;; scroll ground left
-          
-    
+
+    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
+    inc hl
+	ld a,SHIP_CHARACTER_CODE 
+	ld (hl),a              
+       
     ld b, 22
     ld hl,(D_FILE)          
     inc hl
     ld (currentRowOffset), hl
 screen_scroll_left_row       
     push bc    
-    ld b, 30
+    ld b, 31
     ld c, 0
     xor a                  ; a is set to zero (z80 fastest way to zero a number (4 clock cycles (T-states))http://z80-heaven.wikidot.com/instructions-set:xor#toc4
-    inc a                  ; increment the column count: set to 1
-    inc a                  ; increment the column count: set to 2
+    ;inc a                  ; increment the column count: set to 1
+    ;;inc a                  ; increment the column count: set to 2
     ld (col_counter), a    ; store column count
     
 screen_scroll_left_col           
-        
+
+    ld a, (col_counter)    ; load column count
+    inc a                  ; increment the column count
+    ld (col_counter), a    ; store column count
+    
     ; the idea is to go from left to right of screen moving each block at it's current location to the left by 1
     ; do each column by row
     ld hl,(currentRowOffset) ; get the value at row and column pos + 1, then move to current row and column
@@ -359,7 +372,7 @@ screen_scroll_left_col
 
     ld a, (col_counter)    ; load column count
     inc a                  ; increment the column count
-    inc a
+    ;;inc a
     ld (col_counter), a    ; store column count
     
     djnz screen_scroll_left_col    
@@ -375,10 +388,9 @@ screen_scroll_left_col
 
     ; as we scrolled whole screen left, the ship has to be moved right one column to maintain it's position
     ;; even without user input
-    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
-    inc hl
+    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
 	ld a,SHIP_CHARACTER_CODE 
-	ld (hl),a
+	ld (hl),a          
 
 
 ;; before we add the next ground block at the far right we need to zero the column to preven block 
@@ -396,7 +408,7 @@ zeroLastColumnLoop
     djnz zeroLastColumnLoop    
 
 
-;;; now reuse some of the code from initialiseing the gorund in a one shot to draw next ground
+;;; now reuse some of the code from initialising the gorund in a one shot to draw next ground
     ld de, (groundLevelMemoryLocationNow)
     ld a,(de)      
     ld l, a        
@@ -437,42 +449,62 @@ zeroLastColumnLoop
 
 
 drawDown    
+    ld a,(vertPosition)         ; check vertical position is within limits
+    dec a
+    cp 1
+    jp z, skipMove
+        
+    ld a,(vertPosition)     ; the cp 1 mangles a so reload
+    dec a
+    ld (vertPosition),a
+  
     ;overrite existing ship pos with blank
     ld hl,(var_ship_pos)
+    dec hl
 	xor 0
 	ld (hl),a
-    
-    ;ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
-    ld de,32
-    add hl, de
-    ld (var_ship_pos), hl    
-	ld a,SHIP_CHARACTER_CODE 
+        
+    ld de,33
+    add hl, de    
+    ld (var_ship_pos), hl        
+	;ld a,SHIP_CHARACTER_CODE 
+    ld a,138 
 	ld (hl),a
     
     jp afterDrawUpDown
     
 drawUp
+    ld a,(vertPosition)         ; check vertical position is within limits
+    inc a
+    cp 20
+    jp z, skipMove
+    
+    ld a,(vertPosition)     ; the cp 1 mangles a so reload
+    inc a
+    ld (vertPosition),a
+
+
     ;overrite existing ship pos with blank
     ld (var_ship_pos), hl    
 	xor 0
 	ld (hl),a
-    
-    ;ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added
-    
+     
     ; if only there was sub hl, de 16bit subract
-    ld de,32
-    ld a, h
+    ld de,33
+    ld a, l
     sub d
-    ld h, d
+    ld l, d
     
-    ld a,l
+    ld a,h
     sub e
-    ld l, a
-    
-    ld (var_ship_pos), hl    
-	ld a,SHIP_CHARACTER_CODE 
+    ld h, a
+
+    ld (var_ship_pos), hl        
+	;ld a,SHIP_CHARACTER_CODE 
+    ld a,135
 	ld (hl),a
-    
+
+skipMove    
 afterDrawUpDown
     
 
