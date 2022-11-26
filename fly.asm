@@ -3,13 +3,12 @@
 ;;; uses simple charcter/block graphics and requires 16K ZX81
 ;;;;;;;;;;;;;;;;;;;;;
 
-;; toto (all of it lol) :
-;;       change initial ship position to middle of screen on left
-;;       make it so the ship can be controlled left right up and down limiting to edges of screen
+;;todo
+;;       
 ;;       make also work for joystick inputs
-;;       draw a random height 
-;;       plot random ground blocks starting at far right edge and then move them along 
-;;           (somehow also working out how to avoid moving the ship, (maybe by moving tghe ship right by one immeditaly )
+;;       include fire button command and make ship show fireing cannon when pressed
+;;       add enemys, both ground luanched vertically and from right in air
+;;       add collision detection and end of game
 
 
 #include "zx81defs.asm" ;; https://www.sinclairzxworld.com/viewtopic.php?t=2186&start=40
@@ -60,8 +59,6 @@ to_print_mem
 	DEFB 0,0
 groundCharacter
 	DEFB 0
-groundLevelIndex
-    DEFB 0,0
 groundLevelMemoryLocationNow
     DEFB 0,0
 row_counter    
@@ -73,6 +70,8 @@ screen_content_at_current
 currentRowOffset    
     DEFB 0,0
 vertPosition    
+    DEFB 0,0
+numberOfGroundBlocksMoved    
     DEFB 0,0
 crash_message_txt
 	DEFB	_G,_A,_M,_E,__,_O,_V,_E,_R,$ff	
@@ -258,17 +257,19 @@ main
 	ld (score_mem_tens),a	
 	ld (score_mem_hund),a
 	ld (score_mem_thou),a	    
-    ld de,$0000 
-    ld (groundLevelIndex), de
     
-	ld bc, $03ff					; set initial difficulty
+	ld bc, $00ff					; set initial difficulty
 	ld (speedUpLevelCounter), bc
 	   
     ;ld b, COL_IN_SCREEN         ; initialise loop counter (used by djnz)       
+    ld hl, 0
+    ld (numberOfGroundBlocksMoved),hl
    
     ld de, groundLevelMemory
     ld (groundLevelMemoryLocationNow), de
     ld b, 31       ; initialise loop counter (used by djnz)       
+    
+    
     
 initialiseGround        
                 ;; we use a pre initialise memory blcok to control the height of each 
@@ -417,7 +418,7 @@ zeroLastColumnLoop
     ld h, a    
     inc de   ; increment again to get to the next location
     ld (groundLevelMemoryLocationNow), de
-    
+           
     push hl         ;; you can't just do "ld hl, de", that instruction doesn't exist, 
                     ;; would be too easy, so have to use stack "push and pop"
     pop de
@@ -428,6 +429,26 @@ zeroLastColumnLoop
 
     ld a, GROUND_CHARACTER_CODE
     ld (hl),a    
+
+    ld hl,(numberOfGroundBlocksMoved)
+    inc hl
+    ld (numberOfGroundBlocksMoved), hl
+    and a   
+    or a          
+	ld de,-320
+	add hl,de    
+    jr nc,afterCheckingGroundIndex
+
+    jr resetGound   ; Yes I know it's the next line but  
+    
+resetGound
+    ld hl, 0 
+    ld (numberOfGroundBlocksMoved),hl  
+    
+    ld de, startOfNormalGround    
+    ld (groundLevelMemoryLocationNow), de
+    
+afterCheckingGroundIndex      
     
 ;;;;;;;;;;;;;;;    
         
@@ -450,58 +471,50 @@ zeroLastColumnLoop
 
 drawDown    
     ld a,(vertPosition)         ; check vertical position is within limits
-    dec a
-    cp 1
+    inc a
+    cp 22
     jp z, skipMove
         
     ld a,(vertPosition)     ; the cp 1 mangles a so reload
-    dec a
+    inc a
     ld (vertPosition),a
   
     ;overrite existing ship pos with blank
-    ld hl,(var_ship_pos)
-    dec hl
-	xor 0
+    ld hl,(var_ship_pos)    
+	ld a, 0
 	ld (hl),a
         
     ld de,33
     add hl, de    
     ld (var_ship_pos), hl        
-	;ld a,SHIP_CHARACTER_CODE 
-    ld a,138 
+	ld a,SHIP_CHARACTER_CODE     
 	ld (hl),a
     
     jp afterDrawUpDown
     
 drawUp
     ld a,(vertPosition)         ; check vertical position is within limits
-    inc a
-    cp 20
+    dec a
+    cp 1
     jp z, skipMove
     
     ld a,(vertPosition)     ; the cp 1 mangles a so reload
-    inc a
+    dec a
     ld (vertPosition),a
 
 
     ;overrite existing ship pos with blank
-    ld (var_ship_pos), hl    
-	xor 0
+    ld hl, (var_ship_pos)
+	ld a, 0
 	ld (hl),a
      
-    ; if only there was sub hl, de 16bit subract
-    ld de,33
-    ld a, l
-    sub d
-    ld l, d
-    
-    ld a,h
-    sub e
-    ld h, a
+    and a
+    or a
+    ld de,33    
+    sbc hl, de    
 
     ld (var_ship_pos), hl        
-	;ld a,SHIP_CHARACTER_CODE 
-    ld a,135
+	ld a,SHIP_CHARACTER_CODE 
 	ld (hl),a
 
 skipMove    
@@ -546,16 +559,16 @@ printScoreInGame
 	ld a, (score_mem_tens) ; load tens		
 	call printByte
 
-    ld bc, (speedUpLevelCounter)
-	ld hl, (speedUpLevelCounter)   ; makes it more difficult as you progress
-	ld a, h
-	cp 0
-	jr z, waitloop
-	dec hl 
-	ld (speedUpLevelCounter), hl
+    ;ld bc, (speedUpLevelCounter)
+	;ld hl, (speedUpLevelCounter)   ; makes it more difficult as you progress
+	;ld a, h
+	;cp 0
+	;jr z, waitloop
+	;dec hl 
+	;ld (speedUpLevelCounter), hl
 
-	ld bc, (speedUpLevelCounter)
-    ;ld bc, $ffff
+	;ld bc, (speedUpLevelCounter)
+    ld bc, $0001
 waitloop
 	dec bc
 	ld a,b
