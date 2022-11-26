@@ -410,12 +410,10 @@ zeroLastColumnLoop
 
     ld hl,(D_FILE) 
 
-    add hl,de       ;; add the start of display memory to the offset 
-                    ;; (note the groundLevelMemory already has the plus 1 added to push one after D_FILE)
-  
+    add hl,de       
+
     ld a, GROUND_CHARACTER_CODE
     ld (hl),a    
-      
     
 ;;;;;;;;;;;;;;;    
         
