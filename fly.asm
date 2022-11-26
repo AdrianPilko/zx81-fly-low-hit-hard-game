@@ -317,13 +317,13 @@ initialiseGround
     ld (vertPosition),a
 
 
-    ; test add character at top (remove later)
+    ; test add character at bottom right (remove later)
      
-;    ld hl,(D_FILE) 
-;	ld de, 725
-;	add hl, de	
-;	ld a,128 
-;	ld (hl),a 
+    ;ld hl,(D_FILE) 
+	;ld de, 725
+	;add hl, de	
+	;ld a,128 
+	;ld (hl),a 
     
 mainGameLoop
 
@@ -429,6 +429,13 @@ zeroLastColumnLoop
 
     ld a, GROUND_CHARACTER_CODE
     ld (hl),a    
+    
+    ; force remove the bottom left character which is being shift (and is score shifted)
+    ld hl,(D_FILE) 
+	ld de, 694
+	add hl, de	
+	xor 0 
+	ld (hl),a 
 
     ld hl,(numberOfGroundBlocksMoved)
     inc hl
