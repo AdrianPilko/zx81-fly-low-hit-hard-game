@@ -342,17 +342,12 @@ screen_scroll_left_row
     push bc    
     ld b, 31
     ld c, 0
-    xor a                  ; a is set to zero (z80 fastest way to zero a number (4 clock cycles (T-states))http://z80-heaven.wikidot.com/instructions-set:xor#toc4
-    ;inc a                  ; increment the column count: set to 1
-    ;;inc a                  ; increment the column count: set to 2
+    
+    ld a, 1                  ; a is set to zero (z80 fastest way to zero a number (4 clock cycles (T-states))http://z80-heaven.wikidot.com/instructions-set:xor#toc4
     ld (col_counter), a    ; store column count
     
 screen_scroll_left_col           
-
-    ld a, (col_counter)    ; load column count
-    inc a                  ; increment the column count
-    ld (col_counter), a    ; store column count
-    
+  
     ; the idea is to go from left to right of screen moving each block at it's current location to the left by 1
     ; do each column by row
     ld hl,(currentRowOffset) ; get the value at row and column pos + 1, then move to current row and column
@@ -361,19 +356,13 @@ screen_scroll_left_col
     ld a, (hl)
     ld (screen_content_at_current), a    
         
-    ld a, (col_counter)
-    dec a
-    ld (col_counter), a
+    dec hl
 
-    ld hl,(currentRowOffset) 
-    ld de, (col_counter)
-    add hl, de
     ld a, (screen_content_at_current)   
     ld (hl), a
 
     ld a, (col_counter)    ; load column count
     inc a                  ; increment the column count
-    ;;inc a
     ld (col_counter), a    ; store column count
     
     djnz screen_scroll_left_col    
