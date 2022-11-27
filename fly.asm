@@ -31,8 +31,6 @@
 #define COL_IN_SCREEN 32
 #define RANDOM_BYTES_MEM_LOCATION 2000
 ;((32*23)-1)
-#define SCREEN_BOTTOM_RIGHT_MEM_OFFSET 725
-#define SCREEN_BOTTOM_LEFT_MEM_OFFSET 694
 #define SHIP_SCREEN_MEM_START_OFFSET  265   ; this is just a bit higher than the middle of the screen on the left
 
 ;D_FILE is location of screen memory (which moves depending on length of basic, but should be fixed after program is loaded
@@ -43,8 +41,8 @@
 #define SHIP_CHARACTER_CODE 129   ; left facing corner block
 #define SHIP_CHARACTER_CODE_1 130 ; right facing corner  
 
-;black grey block
-#define GROUND_CHARACTER_CODE 8
+#define GROUND_CHARACTER_CODE 61
+#define GROUND_CHARACTER_CODE_2 189
 
 ; keyboard port for shift key to v
 #define KEYBOARD_READ_PORT_SHIFT_TO_V $FE
@@ -407,8 +405,29 @@ zeroLastColumnLoop
     add hl,de       
 
     ld a, GROUND_CHARACTER_CODE
-    ld (hl),a    
-
+    ld (hl),a 
+    ld de, 33   ;; only set one below ground at moment til code below commented out is fixed
+    add hl, de    
+    ld a, GROUND_CHARACTER_CODE_2    
+    ld (hl),a 
+;    push hl
+    ;;; this code to fill up all the characters below ground level crashes at moment
+;fillGroundToBottom
+;    ld de,-659
+;    add hl,de    
+;    jr nc, fillGroundToBottomLoopExit
+;    pop hl
+;    ld de, 33
+;    add hl, de    
+;    ld a, GROUND_CHARACTER_CODE_2    
+;    ld (hl),a    
+;    push hl
+;    
+;    jr fillGroundToBottom
+    
+;fillGroundToBottomLoopExit
+;    pop hl ; clear stack (has to be equal push and pop or will blow
+    
     ; force remove the bottom left character which is being shift (and is score shifted)
     ld hl,(D_FILE) 
     ld de, 694
