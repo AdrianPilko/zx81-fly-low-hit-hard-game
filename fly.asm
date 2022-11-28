@@ -320,30 +320,26 @@ initialiseGround
     
 mainGameLoop
 
-    ;; scroll ground left       
-       
+;; scroll ground left           
     ld b, 22
     ld hl,(D_FILE)          
     inc hl
-    ld (currentRowOffset), hl
-screen_scroll_left_row       
+    push hl
+    pop de
+screenScrollLeftRowLoop
     push bc    
-
 ;;;;;;;;;;; This replaces the whole inner loop;;
 ;; LDIR : Repeats LDI (LD (DE),(HL), then increments DE, HL, and decrements BC) until BC=0.
-;; this is the super fact way to copy  the columns to the left
-    ld bc, 31
-    ld hl,(currentRowOffset)
-    ld de,(currentRowOffset)    
+;; this is the super fast way to copy  the columns to the left
+    ld bc, 31   
     inc hl    
-    ldir            ;; this is where the majic happens!!! 
+    ldir            ;; this is where the magic happens!!! 
     
-    ld hl,(currentRowOffset)
-    ld de, 33
-    add hl, de
-    ld (currentRowOffset), hl
+    inc hl
+    push hl
+    pop de
     pop bc
-    djnz screen_scroll_left_row
+    djnz screenScrollLeftRowLoop
 
     ; as we scrolled whole screen left, the ship has to be moved right one column to maintain it's position
     ;; even without user input
