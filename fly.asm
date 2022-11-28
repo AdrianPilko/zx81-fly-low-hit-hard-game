@@ -80,7 +80,7 @@ crash_message_txt
 title_screen_txt
 	DEFB	_Z,_X,_8,_1,__,_F,_L,_Y,__,_L,_O,_W,26,__,_H,_I,_T,__,_H,_A,_R,_D,$ff
 keys_screen_txt
-	DEFB	_S,__,_T,_O,__,_S,_T,_A,_R,_T,26,__,_A,__,_U,_P,__,26,_Z,__,_D,_O,_W,_N,$ff
+	DEFB	_S,__,_S,_T,_A,_R,_T,26,__,_X,__,_U,_P,__,26,_N,__,_D,_O,_W,_N,__,_S,_P,_A,_C,_E,__,_F,_I,_R,_E,$ff
 keys_screen_txt_2
 	DEFB	$10,_O,_R,__,_J,_O,_Y,_S,_T,_I,_C,_K,__,_P,_R,_E,_S,_S,__,_J,__,_F,_I,_R,_E,$11,$ff    
 using_joystick_string
@@ -184,7 +184,7 @@ intro_title
     ld bc,105
     ld de,title_screen_txt
     call printstring
-    ld bc,203
+    ld bc,199
     ld de,keys_screen_txt
     call printstring	
 
@@ -320,26 +320,28 @@ initialiseGround
     
 mainGameLoop
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scroll ground left           
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ld b, 22
     ld hl,(D_FILE)          
     inc hl
     push hl
     pop de
 screenScrollLeftRowLoop
-    push bc    
-;;;;;;;;;;; This replaces the whole inner loop;;
-;; LDIR : Repeats LDI (LD (DE),(HL), then increments DE, HL, and decrements BC) until BC=0.
-;; this is the super fast way to copy  the columns to the left
+    push bc       
+    
+    ;; this is the super fast way to copy  the columns to the left
     ld bc, 31   
     inc hl    
     ldir            ;; this is where the magic happens!!! 
-    
+                    ;; LDIR : Repeats LDI (LD (DE),(HL), then increments DE, HL, and decrements BC) until BC=0.
     inc hl
     push hl
     pop de
     pop bc
     djnz screenScrollLeftRowLoop
+
 
     ; as we scrolled whole screen left, the ship has to be moved right one column to maintain it's position
     ;; even without user input
@@ -515,6 +517,18 @@ LoopfireMissile
 skipMove    
 afterDrawUpDownFire
 
+
+    ;;;;;;; Check for collision with ground (or top)
+    ld hl,(var_ship_pos)    	
+	xor a  ;set carry flag to 0
+	ld de, 32 
+	sbc hl,de
+	ld a,(hl)
+	or a
+	jp nz,gameover
+
+
+
 preWaitloop
     ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
     add a,1	
@@ -564,29 +578,30 @@ waitloop
 	jr nz, waitloop
 	jp mainGameLoop
 	
-; gameover
-	; ld bc,10
-	; ld de,crash_message_txt
-	; call printstring
-	; ; copy the current score to high score, need to check it is higher!!
+gameover
+	ld bc,10
+	ld de,crash_message_txt
+	call printstring
+	; copy the current score to high score, need to check it is higher!!
 	
-	; ld a, (score_mem_tens) ; load tens		
-	; ld (last_score_mem_tens),a 
-	; ld a, (score_mem_hund) ; load tens		
-	; ld (last_score_mem_hund),a	
+	ld a, (score_mem_tens) ; load tens		
+	ld (last_score_mem_tens),a 
+	ld a, (score_mem_hund) ; load tens		
+	ld (last_score_mem_hund),a	
 
 
 
-	; ld bc, $ffff   ;; wait max time for 16bits then go back to intro	
-; waitloop_end_game
-	; dec bc
-	; ld a,b
-	; or c
-	; jp nz, waitloop_end_game
-	; jp intro_title
-	
-	;ret  ; never return to basic
-	
+    ld bc, $ffff   ;; wait max time for 16bits then go back to intro	
+    
+waitLoopEndGame
+    dec bc
+    ld a,b
+    or c
+    jp nz, waitLoopEndGame
+    jp intro_title
+
+    ret  ; never return to basic
+
 ; original game written by Jon Kingsman, for zx spectrum, ZX81 port/rework by Adrian Pilkington 
 
 
