@@ -95,6 +95,8 @@ title_screen_edge
 	DEFB	18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,$ff
 test_str		
 	DEFB	6,$ff			
+missileFired    
+    DEFB 0
 score_mem_tens
 	DEFB 0
 score_mem_hund
@@ -271,6 +273,8 @@ main
     ld (groundLevelMemoryLocationNow), de
     ld b, 31       ; initialise loop counter (used by djnz)       
 
+    ld a, 0
+    ld (missileFired), a
 
     
 initialiseGround        
@@ -507,13 +511,16 @@ drawUp
 fireMissile
     ld b,15
     ld hl,(var_ship_pos)    
-    ld a,4
+    inc hl
+    ld a,22 ;; minus sign symbol
 LoopfireMissile
     inc hl 
     ld (hl),a        
-    djnz LoopfireMissile
+    djnz LoopfireMissile   
+    ld a, 1
+    ld (missileFired), a
     jp afterDrawUpDownFire
-    
+        
 skipMove    
 afterDrawUpDownFire
 
@@ -576,6 +583,24 @@ waitloop
 	ld a,b
 	or c
 	jr nz, waitloop
+    
+
+;;; clear missile (mainly to prevent it "shooting" own ship down)
+;;; only if missile fire flag set    
+    ld a, (missileFired)
+    cp 1
+    jp nz, mainGameLoop
+    
+    ld b,15
+    ld hl,(var_ship_pos)    
+    inc hl
+    ld a,0 ;;blank character
+LoopfireMissileClear
+    inc hl 
+    ld (hl),a        
+    djnz LoopfireMissileClear
+    ld a, 0
+    ld (missileFired), a
 	jp mainGameLoop
 	
 gameover
