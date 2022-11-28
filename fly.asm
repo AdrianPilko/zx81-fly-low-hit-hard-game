@@ -38,8 +38,8 @@
 #define D_FILE 16396
 
 ;ship is made up of two blocks
-#define SHIP_CHARACTER_CODE 129   ; left facing corner block
-#define SHIP_CHARACTER_CODE_1 130 ; right facing corner  
+#define SHIP_CHARACTER_CODE 130   ; right facing corner  
+;#define SHIP_CHARACTER_CODE_1 129 ; 
 
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
@@ -313,10 +313,7 @@ initialiseGround
     add hl, de	
     ld a,SHIP_CHARACTER_CODE 
     ld (hl),a
-    ld (var_ship_pos),hl ;save ship posn
-    inc hl
-    ld a,SHIP_CHARACTER_CODE_1
-    ld (hl),a          
+    ld (var_ship_pos),hl ;save ship posn       
     
     ld a, 10 
     ld (vertPosition),a
@@ -365,10 +362,7 @@ screen_scroll_left_col
     ;; even without user input
     ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
     ld a,SHIP_CHARACTER_CODE 
-    ld (hl),a          
-    inc hl
-    ld a,SHIP_CHARACTER_CODE_1
-    ld (hl),a          
+    ld (hl),a              
 
     ;; before we add the next ground block at the far right we need to zero the column to preven block 
     ;;drag over all the columns
@@ -406,28 +400,28 @@ zeroLastColumnLoop
 
     ld a, GROUND_CHARACTER_CODE
     ld (hl),a 
-    ld de, 33   ;; only set one below ground at moment til code below commented out is fixed
+    push hl
+    ;;; this code to fill up all the characters below ground level crashes at moment
+fillGroundToBottom
+    and a
+    or a
+    ld de,-725
+    add hl,de
+    ld a, l
+    cp 0  
+    jr z, fillGroundToBottomLoopExit
+    pop hl
+    ld de, 33
     add hl, de    
     ld a, GROUND_CHARACTER_CODE_2    
-    ld (hl),a 
-;    push hl
-    ;;; this code to fill up all the characters below ground level crashes at moment
-;fillGroundToBottom
-;    ld de,-659
-;    add hl,de    
-;    jr nc, fillGroundToBottomLoopExit
-;    pop hl
-;    ld de, 33
-;    add hl, de    
-;    ld a, GROUND_CHARACTER_CODE_2    
-;    ld (hl),a    
-;    push hl
-;    
-;    jr fillGroundToBottom
+    ld (hl),a    
+    push hl
     
-;fillGroundToBottomLoopExit
-;    pop hl ; clear stack (has to be equal push and pop or will blow
+    jr fillGroundToBottom
     
+fillGroundToBottomLoopExit
+    pop hl ; clear stack (has to be equal push and pop or will blow
+ 
     ; force remove the bottom left character which is being shift (and is score shifted)
     ld hl,(D_FILE) 
     ld de, 694
@@ -462,13 +456,16 @@ afterCheckingGroundIndex
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 3, a					        ; N
     jp z, drawDown
+    
+    bit 0, a
+    jp z, fireMissile
 
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 2, a					        ; X
     jp z, drawUp  
 
-    jp afterDrawUpDown  ; no key pressed ship move
+    jp afterDrawUpDownFire  ; no key pressed ship move
 
 
 drawDown    
@@ -491,11 +488,9 @@ drawDown
     ld (var_ship_pos), hl        
     ld a,SHIP_CHARACTER_CODE     
     ld (hl),a
-    inc hl
-    ld a,SHIP_CHARACTER_CODE_1
-    ld (hl),a          
+        
 
-    jp afterDrawUpDown
+    jp afterDrawUpDownFire
     
 drawUp
     ld a,(vertPosition)         ; check vertical position is within limits
@@ -521,11 +516,21 @@ drawUp
     ld (var_ship_pos), hl        
     ld a,SHIP_CHARACTER_CODE 
     ld (hl),a
-    inc hl
-    ld a,SHIP_CHARACTER_CODE_1
-    ld (hl),a          
+       
+    jp afterDrawUpDownFire  
+    
+fireMissile
+    ld b,15
+    ld hl,(var_ship_pos)    
+    ld a,4
+LoopfireMissile
+    inc hl 
+    ld (hl),a        
+    djnz LoopfireMissile
+    jp afterDrawUpDownFire
+    
 skipMove    
-afterDrawUpDown
+afterDrawUpDownFire
 
 preWaitloop
     ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
@@ -563,7 +568,12 @@ printScoreInGame
 	;ld (speedUpLevelCounter), hl
 
 	;ld bc, (speedUpLevelCounter)
-    ld bc, $0001
+    
+    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
+    ld a,SHIP_CHARACTER_CODE 
+    ld (hl),a              
+    
+    ld bc, $00ff
 waitloop
 	dec bc
 	ld a,b
