@@ -328,29 +328,16 @@ mainGameLoop
     ld (currentRowOffset), hl
 screen_scroll_left_row       
     push bc    
-    ld b, 31
-    ld c, 0
 
-    ld a, 1                  ; a is set to zero (z80 fastest way to zero a number (4 clock cycles (T-states))http://z80-heaven.wikidot.com/instructions-set:xor#toc4
-    ld (col_counter), a    ; store column count
-
-    ld hl,(currentRowOffset) ; get the value at row and column pos + 1, then move to current row and column
-    ld de, (col_counter)
-    add hl, de
+;;;;;;;;;;; This replaces the whole inner loop;;
+;; LDIR : Repeats LDI (LD (DE),(HL), then increments DE, HL, and decrements BC) until BC=0.
+;; this is the super fact way to copy  the columns to the left
+    ld bc, 31
+    ld hl,(currentRowOffset)
+    ld de,(currentRowOffset)    
+    inc hl    
+    ldir            ;; this is where the majic happens!!! 
     
-screen_scroll_left_col           
-  
-    ; the idea is to go from left to right of screen moving each block at it's current location to the left by 1
-    ; do each column by row   
-    ld a, (hl)  
-    dec hl          ; move the index to screen memory left by one    
-    ld (hl), a  ; deposit the value found from column + 1 (stored in a)  in column pointed to by the decremented hl    
-    inc hl
-    inc hl
-
-    djnz screen_scroll_left_col    
-
-
     ld hl,(currentRowOffset)
     ld de, 33
     add hl, de
