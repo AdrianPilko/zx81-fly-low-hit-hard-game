@@ -1,5 +1,5 @@
 ;;;;;;;;;;;;;;;;;;;;;
-;;; ZX81 fly low hit hard game by Adrian Pilkington
+;;; ZX81 fly low hit hard game by Adrian Pilkington 29/11/2022
 ;;; uses simple charcter/block graphics and requires 16K ZX81
 ;;;;;;;;;;;;;;;;;;;;;
 
@@ -424,7 +424,7 @@ fillGroundToBottomLoopExit
     ld (numberOfGroundBlocksMoved), hl
     and a   
     or a          
-    ld de,-320
+    ld de,-320    ;; neat way of checking if a 16bit limit reached load negative constant then add and check "no carry"
     add hl,de    
     jr nc,afterCheckingGroundIndex
 
@@ -613,7 +613,7 @@ printScoreInGame
     ld a,SHIP_CHARACTER_CODE 
     ld (hl),a              
     
-    ld bc, $00ff
+    ld bc, $02ff
 waitloop
 	dec bc
 	ld a,b
