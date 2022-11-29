@@ -39,7 +39,7 @@
 
 ;ship is made up of two blocks
 #define SHIP_CHARACTER_CODE 130   ; right facing corner  
-#define ENEMY_CHARACTER_CODE 129
+#define ENEMY_CHARACTER_CODE 6
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
 
@@ -447,15 +447,12 @@ afterCheckingGroundIndex
     bit 3, a					        ; N
     jp z, drawDown
     
-    bit 0, a
-    jp z, fireMissile
-
     ld a, KEYBOARD_READ_PORT_SHIFT_TO_V			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
     bit 2, a					        ; X
     jp z, drawUp  
 
-    jp afterDrawUpDownFire  ; no key pressed ship move
+    jp afterDrawUpDown  ; no key pressed ship move
 
 
 drawDown    
@@ -480,7 +477,7 @@ drawDown
     ld (hl),a
         
 
-    jp afterDrawUpDownFire
+    jp afterDrawUpDown
     
 drawUp
     ld a,(vertPosition)         ; check vertical position is within limits
@@ -507,7 +504,18 @@ drawUp
     ld a,SHIP_CHARACTER_CODE 
     ld (hl),a
        
-    jp afterDrawUpDownFire  
+    jp afterDrawUpDown  
+       
+skipMove    
+afterDrawUpDown
+
+    ;; move ship up / down
+    ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
+    in a, (KEYBOARD_READ_PORT)					; read from io port		  
+    bit 0, a        ; space key
+    jp z, fireMissile
+    
+    jp afterDrawUpDownFire
 
 fireMissile
     ld b,15
@@ -521,10 +529,8 @@ LoopfireMissile
     ld a, 1
     ld (missileFired), a
     jp afterDrawUpDownFire
-        
-skipMove    
-afterDrawUpDownFire
 
+afterDrawUpDownFire
 
 ; create a random number and enemy position row number between 0 and 6
 tryAnotherR                             ; generate random number to index shape memory
@@ -534,8 +540,16 @@ tryAnotherR                             ; generate random number to index shape 
     cp 11
     jp nc, tryAnotherR                  ; loop when nc flag set ie not less than 5 try again        
 
-;; if the enemy row is zero don't draw one this time   
+    ;; cut down number of enemies coming in
     cp 0
+    jp z, skipAddEnemy
+    cp 2
+    jp z, skipAddEnemy
+    cp 5
+    jp z, skipAddEnemy
+    cp 8
+    jp z, skipAddEnemy
+    cp 10
     jp z, skipAddEnemy
     
     ld a, (enemyStartRowPosition)
@@ -546,25 +560,20 @@ calculateRowForEnemey
     add hl, de 
     djnz calculateRowForEnemey
 
-;;;; DEBUG
-    ;ld hl, (D_FILE)
-    ;ld de, 163
-    ;add hl, de
     ld a,ENEMY_CHARACTER_CODE     
     ld (hl),a     
 
 skipAddEnemy
 
-    ;;;;;;; Check for collision with ground (or top which it shouldn't... BUG!!)
+    ;;;;;;; Check for collision with anything 
     ld hl,(var_ship_pos) 
-	ld a,(hl)	
     inc hl
-    ld b, (hl)
-    cp b
-	jp z,gameover
+    ld a, (hl)
+    cp 0
+	jp nz,gameover
 
 preWaitloop
-    ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
+    ld a,(score_mem_tens)				   ;;; need to check for kills and then add one to score
     add a,1	
     daa									; z80 daa instruction realigns for BCD after add or subtract
     ld (score_mem_tens),a	
