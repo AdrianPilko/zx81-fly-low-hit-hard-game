@@ -39,8 +39,7 @@
 
 ;ship is made up of two blocks
 #define SHIP_CHARACTER_CODE 130   ; right facing corner  
-;#define SHIP_CHARACTER_CODE_1 129 ; 
-
+#define ENEMY_CHARACTER_CODE 129
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
 
@@ -68,6 +67,8 @@ row_counter
 col_counter        
     DEFB 0,0
 screen_content_at_current
+    DEFB 0    
+enemyStartRowPosition
     DEFB 0    
 currentRowOffset    
     DEFB 0,0
@@ -507,7 +508,7 @@ drawUp
     ld (hl),a
        
     jp afterDrawUpDownFire  
-    
+
 fireMissile
     ld b,15
     ld hl,(var_ship_pos)    
@@ -525,16 +526,42 @@ skipMove
 afterDrawUpDownFire
 
 
-    ;;;;;;; Check for collision with ground (or top)
-    ld hl,(var_ship_pos)    	
-	xor a  ;set carry flag to 0
-	ld de, 32 
-	sbc hl,de
-	ld a,(hl)
-	or a
-	jp nz,gameover
+; create a random number and enemy position row number between 0 and 6
+tryAnotherR                             ; generate random number to index shape memory
+    ld a, r                             
+    and %00001111        
+    ld (enemyStartRowPosition), a
+    cp 11
+    jp nc, tryAnotherR                  ; loop when nc flag set ie not less than 5 try again        
 
+;; if the enemy row is zero don't draw one this time   
+    cp 0
+    jp z, skipAddEnemy
+    
+    ld a, (enemyStartRowPosition)
+    ld b, a    
+    ld hl, (D_FILE)
+    ld de, 32   
+calculateRowForEnemey
+    add hl, de 
+    djnz calculateRowForEnemey
 
+;;;; DEBUG
+    ;ld hl, (D_FILE)
+    ;ld de, 163
+    ;add hl, de
+    ld a,ENEMY_CHARACTER_CODE     
+    ld (hl),a     
+
+skipAddEnemy
+
+    ;;;;;;; Check for collision with ground (or top which it shouldn't... BUG!!)
+    ld hl,(var_ship_pos) 
+	ld a,(hl)	
+    inc hl
+    ld b, (hl)
+    cp b
+	jp z,gameover
 
 preWaitloop
     ld a,(score_mem_tens)				; add one to score, scoring is binary coded decimal (BCD)
