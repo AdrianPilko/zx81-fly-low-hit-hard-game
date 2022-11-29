@@ -117,7 +117,7 @@ speedUpLevelCounter
 credits_and_version_2
 	DEFB _B,_Y,__,_A,__,_P,_I,_L,_K,_I,_N,_G,_T,_O,_N,$ff
 var_keys_or_joystick
-	DEFB 0	
+	DEFB 0,0
 to_print .equ to_print_mem ;use printByte16
 
 ;; note on the zx81 display 
@@ -440,7 +440,22 @@ resetGound
 afterCheckingGroundIndex      
     
     ;; keyboard OR joystick input
-
+    ld a, (var_keys_or_joystick)    ; keys = 1
+    and 1
+    jp nz, use_keys_only
+    
+    ; this works if the joystick is plugged in, and if not then the keys still work, ace :)
+    ld b, 00000100b   ; 1 , joystick down
+    in a,($1F)       ; a now has the input byte from the port 1f (which is the joystick port)
+    ld c, a
+    and b 
+    jp nz, drawDown
+    ld a, c
+    ld b, 00001000b   ; 2 decimal, joystick up
+    and b
+    jp nz, drawUp
+    
+use_keys_only
     ;; move ship up / down
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		
@@ -509,7 +524,18 @@ drawUp
 skipMove    
 afterDrawUpDown
 
-    ;; move ship up / down
+
+    ;; check for fire pressed, but restrick joystick only if was selected (compatibility with emulators!)
+    ld a, (var_keys_or_joystick)    ; keys = 1
+    and 1
+    jp nz, justCheckKeysForFire
+
+    ld b, 00010000b   ; 16 decimal, fire button
+    in a,($1F)       ; a now has the input byte from the port 1f (which is the joystick port)
+    and b 
+    jp nz, fireMissile
+    
+justCheckKeysForFire    
     ld a, KEYBOARD_READ_PORT_SPACE_TO_B			
     in a, (KEYBOARD_READ_PORT)					; read from io port		  
     bit 0, a        ; space key
