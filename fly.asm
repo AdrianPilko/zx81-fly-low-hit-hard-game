@@ -88,6 +88,8 @@ missileCalculatedDisplayPos
     DEFB 0,0,0,0,0,0,0,0,0,0,0,0    
 missileIndex
     DEFB 0
+missileDeleteAfterNext
+    DEFB 0
 crash_message_txt
 	DEFB	_G,_A,_M,_E,__,_O,_V,_E,_R,$ff	
 title_screen_txt
@@ -337,12 +339,11 @@ initialiseGround
     
     xor a           ; set number of missiles in flight to zero
     ld (missileIndex), a    
+    ld (missileOnOffState), a    
+    ld (missileDeleteAfterNext), a    
     ld hl, (D_FILE+1)
     ld (missileCalculatedDisplayPos),hl   ;; for muliple missile the needs indexing    
-    ld a, 0
-    ld (missileOnOffState), a    
-    
-    
+       
 mainGameLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -374,6 +375,20 @@ screenScrollLeftRowLoop
     ld a,SHIP_CHARACTER_CODE 
     ld (hl),a              
 
+printScoreInGame
+    ld b, 21		; b is row to print in
+    ld c, 1			; c is column
+    ld a, (score_mem_hund) ; load hundreds
+    call printByte    
+    ld b, 21			; b is row to print in
+    ld c, 3			; c is column
+    ld a, (score_mem_tens) ; load tens		
+    call printByte
+   
+    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
+    ld a,SHIP_CHARACTER_CODE 
+    ld (hl),a              
+    
     ;; before we add the next ground block at the far right we need to zero the column to preven block 
     ;;drag over all the columns
     ld b, 20     
@@ -619,16 +634,29 @@ loopCalcMissileScreenOffset
     djnz loopCalcMissileScreenOffset
     ld de, (missileColCounter)    ; now add the row  
     add hl, de
-      
     ;we now should have the current offset to the display memory for the missile so draw on screen
-    ld a,22 ;; minus sign symbol for missile
-       
-    ld (hl),a    
-    ld (missileCalculatedDisplayPos),hl
+             
+    ; we need to check for collision with anything, if it has then, mark the missile for deletion later
     
-    
-afterDeleteMissiles    
+    ;; another instance of collision detection
+    ld a,(hl)    
+    cp 6
+    jp z, markForDelete 
+    jr skipPastMarkDelete    
 
+markForDelete 
+    ld a, 1
+    ld (missileDeleteAfterNext), a
+    ;; so here we want to make it look like an explosion, lets use * :)
+    ld a,23 ;; star for missile hit
+    ld (hl),a    
+    ld (missileCalculatedDisplayPos),hl  
+    jr loopBeforeEndMissileUpdate
+skipPastMarkDelete    
+    ld a,22 ;; minus sign symbol for missile        
+    ld (hl),a    
+    ld (missileCalculatedDisplayPos),hl  
+    
 loopBeforeEndMissileUpdate   
 noUpdateForThisOne
     ;pop bc
@@ -636,6 +664,7 @@ noUpdateForThisOne
    
 afterDrawUpDownFire
  
+
 
 ;;; DEBUG disable enemies to get missile fire working!
     ;jp skipAddEnemy
@@ -682,7 +711,10 @@ skipAddEnemy
     cp 0
 	jp nz,gameover
 
-preWaitloop
+    ld a, (missileDeleteAfterNext)
+    cp 0
+    jp z,preWaitloop   ; we didn't get a hit so score still same
+    
     ld a,(score_mem_tens)				   ;;; need to check for kills and then add one to score
     add a,1	
     daa									; z80 daa instruction realigns for BCD after add or subtract
@@ -699,31 +731,27 @@ addOneToHund
     ld (score_mem_hund), a
 skipAddHund	
 
-printScoreInGame
-    ld b, 21		; b is row to print in
-    ld c, 1			; c is column
-    ld a, (score_mem_hund) ; load hundreds
-    call printByte    
-    ld b, 21			; b is row to print in
-    ld c, 3			; c is column
-    ld a, (score_mem_tens) ; load tens		
-    call printByte
-
-    ;ld bc, (speedUpLevelCounter)
-	;ld hl, (speedUpLevelCounter)   ; makes it more difficult as you progress
-	;ld a, h
-	;cp 0
-	;jr z, waitloop
-	;dec hl 
-	;ld (speedUpLevelCounter), hl
-
-	;ld bc, (speedUpLevelCounter)
-    
-    ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
-    ld a,SHIP_CHARACTER_CODE 
-    ld (hl),a              
-    
-    ld bc, $02ff
+; printScoreInGame
+    ; ld b, 21		; b is row to print in
+    ; ld c, 1			; c is column
+    ; ld a, (score_mem_hund) ; load hundreds
+    ; call printByte    
+    ; ld b, 21			; b is row to print in
+    ; ld c, 3			; c is column
+    ; ld a, (score_mem_tens) ; load tens		
+    ; call printByte
+   
+    ; ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
+    ; ld a,SHIP_CHARACTER_CODE 
+    ; ld (hl),a              
+    ; ld a, 0
+    ; ld hl, 698	
+    ; ld (hl), a
+    ; ld a, 0
+    ; ld hl, 699
+    ; ld (hl), a
+preWaitloop    
+    ld bc, $03ff
 waitloop
 	dec bc
 	ld a,b
@@ -740,21 +768,26 @@ waitloop
     xor a       
     ld hl, (missileCalculatedDisplayPos)    ;; for muliple missile the needs indexing    
     ld (hl),a    
-    inc hl
-    ld (hl),a    
 
     ld a, (missileColCounter)
     inc a    
     cp 31
     jp z, disableMissile
-        
+    
     ld (missileColCounter), a
+    
+    ld a, (missileDeleteAfterNext)
+    cp 1
+    jp z,disableMissile
+        
+    
     jp mainGameLoop
 disableMissile
+
     xor a
     ld (missileIndex),a
     ld (missileOnOffState),a 
-
+    ld (missileDeleteAfterNext), a
 
 	jp mainGameLoop
 	
