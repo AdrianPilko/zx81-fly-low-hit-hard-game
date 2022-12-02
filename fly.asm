@@ -43,6 +43,8 @@
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
 
+#define MAX_MISSILES 1    ; currently set to one whilst we debug the code to fire missile
+
 ; keyboard port for shift key to v
 #define KEYBOARD_READ_PORT_SHIFT_TO_V $FE
 ; keyboard space to b
@@ -76,6 +78,16 @@ vertPosition
     DEFB 0,0
 numberOfGroundBlocksMoved    
     DEFB 0,0
+missileColCounter      
+    DEFB 0,0,0,0,0,0
+missileRowCounter      
+    DEFB 0,0,0,0,0,0    
+missileOnOffState      
+    DEFB 0,0,0,0,0,0            
+missileCalculatedDisplayPos
+    DEFB 0,0,0,0,0,0,0,0,0,0,0,0    
+missileIndex
+    DEFB 0
 crash_message_txt
 	DEFB	_G,_A,_M,_E,__,_O,_V,_E,_R,$ff	
 title_screen_txt
@@ -323,6 +335,12 @@ initialiseGround
     ld a, 10 
     ld (vertPosition),a
     
+    xor a           ; set number of missiles in flight to zero
+    ld (missileIndex), a    
+    ld hl, 0
+    ld (missileCalculatedDisplayPos),hl   ;; for muliple missile the needs indexing    
+    
+    
 mainGameLoop
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -541,23 +559,86 @@ justCheckKeysForFire
     bit 0, a        ; space key
     jp z, fireMissile
     
-    jp afterDrawUpDownFire
+    jp missileUpdates
 
+
+
+;missileColCounter and missileRowCounter are used to keep track of the missile positions
+; FOR now just work with one missile!!
+; after the shot is fired the screen would scroll the missile left we need to scroll it right by 2
+; to compensate
+
+;; fire missile will set the initial conditions of row, column and the active on off state
 fireMissile
-    ld b,15
-    ld hl,(var_ship_pos)    
-    inc hl
-    ld a,22 ;; minus sign symbol
-LoopfireMissile
-    inc hl 
-    ld (hl),a        
-    djnz LoopfireMissile   
+
+    ld a, MAX_MISSILES
+    ld b, (missileIndex)
+    cp b
+    jp z, missileUpdates
+    
     ld a, 1
-    ld (missileFired), a
-    jp afterDrawUpDownFire
+    ld (missileOnOffState), a    
+    ld a, 1
+    ld (missileIndex), a           ; for now just get one missile working!!!
+    ;inc a
+    ;cp 6
+    ;jp nz, afterCycleMissileIndex
+    ;xor a ; zero a 
+;afterCycleMissileIndex
+    
+    ;ld (missileIndex), a    
+    ld a, (vertPosition)   ; vert position is the current row the ship is at
+    ld (missileRowCounter), a
+    ld a, 3                 ; start at column 3
+    ld (missileColCounter), a
 
+missileUpdates
+;; draw missiles currently in flight and update positions    
+;;;;;;;;;;;;
+    ld bc, (missileIndex)
+    cp 0
+    jp z, afterDrawUpDownFire
+;missileUpdateLoop    
+ ;   push bc
+    ; calculate the screen position to draw at and draw each, update after
+    ld a, (missileOnOffState)
+    cp 0
+    jp z, noUpdateForThisOne  
+    
+    ld a, (missileRowCounter)
+    ld b, a    
+    dec b       ;; not actually sure why have to dec b twice if don't then the missile appears two rows below (probably error in vertPosition) 
+    dec b 
+    ld hl, (D_FILE)
+    ld de, 33   
+loopCalcMissileScreenOffset
+    add hl, de 
+    djnz loopCalcMissileScreenOffset
+    ld de, (missileColCounter)    ; now add the row  
+    add hl, de
+      
+    ;we now should have the current offset to the display memory for the missile so draw on screen
+    ld a,22 ;; minus sign symbol for missile
+       
+    ld (hl),a    
+    ld (missileCalculatedDisplayPos),hl
+    
+    
+afterDeleteMissiles    
+
+loopBeforeEndMissileUpdate   
+noUpdateForThisOne
+    ;pop bc
+    ;djnz missileUpdateLoop
+   
 afterDrawUpDownFire
+ 
 
+;;; DEBUG disable enemies to get missile fire working!
+    jp skipAddEnemy
+
+
+ 
 ; create a random number and enemy position row number between 0 and 6
 tryAnotherR                             ; generate random number to index shape memory
     ld a, r                             
@@ -649,20 +730,28 @@ waitloop
 
 ;;; clear missile (mainly to prevent it "shooting" own ship down)
 ;;; only if missile fire flag set    
-    ld a, (missileFired)
+
+    ld a, (missileIndex)
     cp 1
-    jp nz, mainGameLoop
-    
-    ld b,15
-    ld hl,(var_ship_pos)    
-    inc hl
-    ld a,0 ;;blank character
-LoopfireMissileClear
-    inc hl 
-    ld (hl),a        
-    djnz LoopfireMissileClear
-    ld a, 0
-    ld (missileFired), a
+    jp nz, mainGameLoop    
+    xor a       
+    ld hl, (missileCalculatedDisplayPos)    ;; for muliple missile the needs indexing
+    ld (hl),a    
+
+    ld a, (missileColCounter)
+    inc a    
+    cp 32
+    jp z, disableMissile
+        
+    ld (missileColCounter), a
+    jp mainGameLoop
+disableMissile
+    ;ld a, (missileColCounter)
+    xor a
+    ld (missileIndex),a
+    ld (missileOnOffState),a 
+
+
 	jp mainGameLoop
 	
 gameover
@@ -687,7 +776,7 @@ waitLoopEndGame
     jp nz, waitLoopEndGame
     jp intro_title
 
-    ret  ; never return to basic
+    ret  ; never return to basic, but will never get here
 
 ; original game written by Jon Kingsman, for zx spectrum, ZX81 port/rework by Adrian Pilkington 
 
