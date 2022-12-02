@@ -337,8 +337,10 @@ initialiseGround
     
     xor a           ; set number of missiles in flight to zero
     ld (missileIndex), a    
-    ld hl, 0
+    ld hl, (D_FILE+1)
     ld (missileCalculatedDisplayPos),hl   ;; for muliple missile the needs indexing    
+    ld a, 0
+    ld (missileOnOffState), a    
     
     
 mainGameLoop
@@ -589,7 +591,7 @@ fireMissile
     ;ld (missileIndex), a    
     ld a, (vertPosition)   ; vert position is the current row the ship is at
     ld (missileRowCounter), a
-    ld a, 3                 ; start at column 3
+    ld a, 2                 ; start at column 3
     ld (missileColCounter), a
 
 missileUpdates
@@ -610,7 +612,8 @@ missileUpdates
     dec b       ;; not actually sure why have to dec b twice if don't then the missile appears two rows below (probably error in vertPosition) 
     dec b 
     ld hl, (D_FILE)
-    ld de, 33   
+    inc hl
+    ld de, 33  
 loopCalcMissileScreenOffset
     add hl, de 
     djnz loopCalcMissileScreenOffset
@@ -635,7 +638,7 @@ afterDrawUpDownFire
  
 
 ;;; DEBUG disable enemies to get missile fire working!
-    jp skipAddEnemy
+    ;jp skipAddEnemy
 
 
  
@@ -735,18 +738,19 @@ waitloop
     cp 1
     jp nz, mainGameLoop    
     xor a       
-    ld hl, (missileCalculatedDisplayPos)    ;; for muliple missile the needs indexing
+    ld hl, (missileCalculatedDisplayPos)    ;; for muliple missile the needs indexing    
+    ld (hl),a    
+    inc hl
     ld (hl),a    
 
     ld a, (missileColCounter)
     inc a    
-    cp 32
+    cp 31
     jp z, disableMissile
         
     ld (missileColCounter), a
     jp mainGameLoop
 disableMissile
-    ;ld a, (missileColCounter)
     xor a
     ld (missileIndex),a
     ld (missileOnOffState),a 
