@@ -1,16 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;
-;;; ZX81 fly low hit hard game by Adrian Pilkington 29/11/2022
+;;; ZX81 fly low hit hard game by Adrian Pilkington 02/12/2022
 ;;; uses simple charcter/block graphics and requires 16K ZX81
 ;;;;;;;;;;;;;;;;;;;;;
-
-;;todo
-;;       
-;;       make also work for joystick inputs
-;;       include fire button command and make ship show fireing cannon when pressed
-;;       add enemys, both ground luanched vertically and from right in air
-;;       add collision detection and end of game
-;;
-;;      BUGS  : the "ship" character flickers but only when not on the top line, probably due to the "scrolling left the readd ship"
 
 #include "zx81defs.asm" ;; https://www.sinclairzxworld.com/viewtopic.php?t=2186&start=40
 ;EQUs for ROM routines
@@ -44,6 +35,7 @@
 #define GROUND_CHARACTER_CODE_2 189
 
 #define MAX_MISSILES 1    ; currently set to one whilst we debug the code to fire missile
+#define SLOW_FRAME_RESET_THRESHOLD  4
 
 ; keyboard port for shift key to v
 #define KEYBOARD_READ_PORT_SHIFT_TO_V $FE
@@ -90,6 +82,13 @@ missileIndex
     DEFB 0
 missileDeleteAfterNext
     DEFB 0
+slowFrameCount_1      ; this is to control things that should only happen slower than the game loop 
+                    ; like drawing a new enemy
+    DEFB 0             
+slowFrameCount_2      ; this is to control things that should only happen _even_ slower than the game loop 
+                    ; like drawing a surface launched missile
+    DEFB 0      
+    
 crash_message_txt
 	DEFB	_G,_A,_M,_E,__,_O,_V,_E,_R,$ff	
 title_screen_txt
@@ -334,18 +333,18 @@ initialiseGround
     ld (hl),a
     ld (var_ship_pos),hl ;save ship posn       
     
-    ld a, 10 
+    ld a, 9 
     ld (vertPosition),a
     
     xor a           ; set number of missiles in flight to zero
     ld (missileIndex), a    
     ld (missileOnOffState), a    
     ld (missileDeleteAfterNext), a    
+    ld (slowFrameCount_1), a
     ld hl, (D_FILE+1)
     ld (missileCalculatedDisplayPos),hl   ;; for muliple missile the needs indexing    
        
 mainGameLoop
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scroll ground left           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -604,7 +603,8 @@ fireMissile
 ;afterCycleMissileIndex
     
     ;ld (missileIndex), a    
-    ld a, (vertPosition)   ; vert position is the current row the ship is at
+    ld a, (vertPosition)   ; vert position is the current row the ship is at  
+    dec a
     ld (missileRowCounter), a
     ld a, 2                 ; start at column 3
     ld (missileColCounter), a
@@ -623,9 +623,7 @@ missileUpdates
     jp z, noUpdateForThisOne  
     
     ld a, (missileRowCounter)
-    ld b, a    
-    dec b       ;; not actually sure why have to dec b twice if don't then the missile appears two rows below (probably error in vertPosition) 
-    dec b 
+    ld b, a        
     ld hl, (D_FILE)
     inc hl
     ld de, 33  
@@ -664,32 +662,18 @@ noUpdateForThisOne
    
 afterDrawUpDownFire
  
-
-
-;;; DEBUG disable enemies to get missile fire working!
-    ;jp skipAddEnemy
-
-
- 
-; create a random number and enemy position row number between 0 and 6
-tryAnotherR                             ; generate random number to index shape memory
+    ld a, (slowFrameCount_1)
+    cp (SLOW_FRAME_RESET_THRESHOLD-1)
+    jp z, noSkipAddEnemy
+    jp skipAddEnemy
+    ; create a random number and enemy position row number between 0 and 6
+noSkipAddEnemy    
+tryAnotherR                             
     ld a, r                             
     and %00001111        
     ld (enemyStartRowPosition), a
-    cp 11
-    jp nc, tryAnotherR                  ; loop when nc flag set ie not less than 5 try again        
-
-    ;; cut down number of enemies coming in
-    cp 0
-    jp z, skipAddEnemy
-    cp 2
-    jp z, skipAddEnemy
-    cp 5
-    jp z, skipAddEnemy
-    cp 8
-    jp z, skipAddEnemy
     cp 10
-    jp z, skipAddEnemy
+    jp nc, tryAnotherR                  
     
     ld a, (enemyStartRowPosition)
     ld b, a    
@@ -731,25 +715,6 @@ addOneToHund
     ld (score_mem_hund), a
 skipAddHund	
 
-; printScoreInGame
-    ; ld b, 21		; b is row to print in
-    ; ld c, 1			; c is column
-    ; ld a, (score_mem_hund) ; load hundreds
-    ; call printByte    
-    ; ld b, 21			; b is row to print in
-    ; ld c, 3			; c is column
-    ; ld a, (score_mem_tens) ; load tens		
-    ; call printByte
-   
-    ; ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
-    ; ld a,SHIP_CHARACTER_CODE 
-    ; ld (hl),a              
-    ; ld a, 0
-    ; ld hl, 698	
-    ; ld (hl), a
-    ; ld a, 0
-    ; ld hl, 699
-    ; ld (hl), a
 preWaitloop    
     ld bc, $03ff
 waitloop
@@ -758,13 +723,12 @@ waitloop
 	or c
 	jr nz, waitloop
     
-
 ;;; clear missile (mainly to prevent it "shooting" own ship down)
 ;;; only if missile fire flag set    
 
     ld a, (missileIndex)
     cp 1
-    jp nz, mainGameLoop    
+    jp nz, lastThings    
     xor a       
     ld hl, (missileCalculatedDisplayPos)    ;; for muliple missile the needs indexing    
     ld (hl),a    
@@ -778,10 +742,8 @@ waitloop
     
     ld a, (missileDeleteAfterNext)
     cp 1
-    jp z,disableMissile
-        
-    
-    jp mainGameLoop
+    jr z,disableMissile
+    jr lastThings
 disableMissile
 
     xor a
@@ -789,8 +751,23 @@ disableMissile
     ld (missileOnOffState),a 
     ld (missileDeleteAfterNext), a
 
+
+;last Things in game loop
+lastThings
+    ld a, (slowFrameCount_1)
+    inc a
+    cp SLOW_FRAME_RESET_THRESHOLD
+    jp z, zeroslowFrameCount_1
+    
+    ld (slowFrameCount_1),a   
+    jp mainGameLoop
+    
+zeroslowFrameCount_1    
+    xor a
+    ld (slowFrameCount_1),a   
+    
 	jp mainGameLoop
-	
+    
 gameover
 	ld bc,10
 	ld de,crash_message_txt
