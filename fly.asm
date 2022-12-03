@@ -177,7 +177,7 @@ introWaitLoop_1
     dec bc
     ld a,b
     or c
-    jr nz, introWaitLoop_1
+    jp nz, introWaitLoop_1
     jp read_start_key
 
 	
@@ -433,7 +433,7 @@ fillGroundToBottom
     add hl,de
     ld a, l
     cp 0  
-    jr z, fillGroundToBottomLoopExit
+    jp z, fillGroundToBottomLoopExit
     pop hl
     ld de, 33
     add hl, de    
@@ -441,7 +441,7 @@ fillGroundToBottom
     ld (hl),a    
     push hl
     
-    jr fillGroundToBottom
+    jp fillGroundToBottom
     
 fillGroundToBottomLoopExit
     pop hl ; clear stack (has to be equal push and pop or will blow
@@ -460,9 +460,9 @@ fillGroundToBottomLoopExit
     or a          
     ld de,-320    ;; neat way of checking if a 16bit limit reached load negative constant then add and check "no carry"
     add hl,de    
-    jr nc,afterCheckingGroundIndex
+    jp nc,afterCheckingGroundIndex
 
-    jr resetGound   ; Yes I know it's the next line but  
+    jp resetGound   ; Yes I know it's the next line but  
     
 resetGound
     ld hl, 0 
@@ -603,10 +603,10 @@ fireMissile
 ;afterCycleMissileIndex
     
     ;ld (missileIndex), a    
-    ld a, (vertPosition)   ; vert position is the current row the ship is at  
+    ld a, (vertPosition)   ; vert position is the current row the ship is at is +1 
     dec a
     ld (missileRowCounter), a
-    ld a, 2                 ; start at column 3
+    ld a, 2                 ; start at column 2
     ld (missileColCounter), a
 
 missileUpdates
@@ -632,28 +632,43 @@ loopCalcMissileScreenOffset
     djnz loopCalcMissileScreenOffset
     ld de, (missileColCounter)    ; now add the row  
     add hl, de
+    ld (missileCalculatedDisplayPos),hl  
     ;we now should have the current offset to the display memory for the missile so draw on screen
              
     ; we need to check for collision with anything, if it has then, mark the missile for deletion later
     
     ;; another instance of collision detection
-    ld a,(hl)    
-    cp 6
+    ld a,(hl)        
+    cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity
     jp z, markForDelete 
-    jr skipPastMarkDelete    
-
+    cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
+    jp z, markForDelete 
+    cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
+    jp z, markForDelete
+    
+    inc hl          ;; check what would be at the character in front of the current position as well
+    cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity    
+    jp z, markForDeleteWithDec 
+    cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
+    jp z, markForDeleteWithDec 
+    cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
+    jp z, markForDeleteWithDec
+   
+    jp skipPastMarkDelete    
+markForDeleteWithDec
+    dec hl
 markForDelete 
+    
     ld a, 1
     ld (missileDeleteAfterNext), a
     ;; so here we want to make it look like an explosion, lets use * :)
     ld a,23 ;; star for missile hit
-    ld (hl),a    
-    ld (missileCalculatedDisplayPos),hl  
-    jr loopBeforeEndMissileUpdate
+    ld (hl),a        
+    jp loopBeforeEndMissileUpdate
 skipPastMarkDelete    
+    
     ld a,22 ;; minus sign symbol for missile        
-    ld (hl),a    
-    ld (missileCalculatedDisplayPos),hl  
+    ld (hl),a        
     
 loopBeforeEndMissileUpdate   
 noUpdateForThisOne
@@ -704,8 +719,8 @@ skipAddEnemy
     daa									; z80 daa instruction realigns for BCD after add or subtract
     ld (score_mem_tens),a	
     cp 153
-    jr z, addOneToHund
-    jr skipAddHund
+    jp z, addOneToHund
+    jp skipAddHund
 addOneToHund
     ld a, 0
     ld (score_mem_tens), a
@@ -721,7 +736,7 @@ waitloop
 	dec bc
 	ld a,b
 	or c
-	jr nz, waitloop
+	jp nz, waitloop
     
 ;;; clear missile (mainly to prevent it "shooting" own ship down)
 ;;; only if missile fire flag set    
@@ -729,21 +744,29 @@ waitloop
     ld a, (missileIndex)
     cp 1
     jp nz, lastThings    
-    xor a       
-    ld hl, (missileCalculatedDisplayPos)    ;; for muliple missile the needs indexing    
-    ld (hl),a    
 
+    ; blank the missiles last position, we can do this because the wait loop has run and given it time to be shown
+    xor a       
+    ld hl, (missileCalculatedDisplayPos)    ;; for muliple missile the needs indexing        
+    ld (hl),a    
+    inc hl
+    ld (hl),a    
+    
+  
+    
+    
+
+    ; this is the code that actually moves the missile accross the screen
     ld a, (missileColCounter)
     inc a    
     cp 31
-    jp z, disableMissile
-    
+    jp z, disableMissile   
     ld (missileColCounter), a
     
     ld a, (missileDeleteAfterNext)
     cp 1
-    jr z,disableMissile
-    jr lastThings
+    jp z,disableMissile
+    jp lastThings
 disableMissile
 
     xor a
