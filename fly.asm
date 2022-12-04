@@ -33,9 +33,11 @@
 #define ENEMY_CHARACTER_CODE 129
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
-
+#define SURFACE_MISSILE 5  ; vertical bar
+#define SURFACE_MISSILE_SMOKE 8  ; grey block, shame no grey vertical bar!!
 #define MAX_MISSILES 1    ; currently set to one whilst we debug the code to fire missile
 #define SLOW_FRAME_RESET_THRESHOLD  4
+#define VERY_SLOW_FRAME_RESET_THRESHOLD  32
 
 ; keyboard port for shift key to v
 #define KEYBOARD_READ_PORT_SHIFT_TO_V $FE
@@ -342,6 +344,7 @@ initialiseGround
     ld (missileOnOffState), a    
     ld (missileDeleteAfterNext), a    
     ld (slowFrameCount_1), a
+    ld (slowFrameCount_2), a
     ld hl, (D_FILE+1)
     ld (missileCalculatedDisplayPos),hl   ;; for muliple missile the needs indexing    
        
@@ -640,7 +643,7 @@ loopCalcMissileScreenOffset
     djnz loopCalcMissileScreenOffset
     ld de, (missileColCounter)    ; now add the row  
     add hl, de
-    call debugPrintRegisters
+    ;call debugPrintRegisters
     ld (missileCalculatedDisplayPos),hl  
         
     ;we now should have the current offset to the display memory for the missile so draw on screen
@@ -686,7 +689,35 @@ noUpdateForThisOne
     ;djnz missileUpdateLoop
    
 afterDrawUpDownFire
- 
+
+;; surface launched missile 
+    ld a, (slowFrameCount_2)
+    cp (VERY_SLOW_FRAME_RESET_THRESHOLD-1)
+    jp z, noSkipAddSurfaceLaunched
+    jp checkIfTimeToAddEnemyShip
+
+noSkipAddSurfaceLaunched
+    xor a
+    ld (slowFrameCount_2),a  
+    
+    ld a,SURFACE_MISSILE ;; minus sign symbol for missile
+    ld hl, (D_FILE)        
+    inc hl
+    ld de, 148
+    add hl, de
+    ld (hl),a
+    ld a,SURFACE_MISSILE_SMOKE ;; minus sign symbol for missile
+    ld de, 33
+    ld bc, 10
+drawSurfaceLaunched    
+    add hl, de    
+    ld (hl),a
+    ;call debugPrintRegisters
+    djnz drawSurfaceLaunched
+    
+    
+
+checkIfTimeToAddEnemyShip
     ld a, (slowFrameCount_1)
     cp (SLOW_FRAME_RESET_THRESHOLD-1)
     jp z, noSkipAddEnemy
@@ -796,13 +827,24 @@ lastThings
     cp SLOW_FRAME_RESET_THRESHOLD
     jp z, zeroslowFrameCount_1
     
+    ld (slowFrameCount_1),a 
+    jp mainGameLoop
+        
+zeroslowFrameCount_1    
+    xor a       ;; zero a then slowFrameCount_1
     ld (slowFrameCount_1),a   
+    
+    ld a, (slowFrameCount_2)            ; this does at half rate again of slowFrameCount_1
+    inc a
+    cp VERY_SLOW_FRAME_RESET_THRESHOLD
+    jp z, zeroslowFrameCount_2
+    
+    ld (slowFrameCount_2),a          
     jp mainGameLoop
     
-zeroslowFrameCount_1    
+zeroslowFrameCount_2
     xor a
-    ld (slowFrameCount_1),a   
-    
+    ld (slowFrameCount_2),a          
 	jp mainGameLoop
     
 gameover
