@@ -592,9 +592,12 @@ justCheckKeysForFire
 ;; fire missile will set the initial conditions of row, column and the active on off state
 fireMissile
 
-    ld a, MAX_MISSILES
-    ld b, (missileIndex)
-    cp b
+    ;ld a, MAX_MISSILES
+    ;ld b, (missileIndex)
+    ;cp b
+    ;jp z, missileUpdates
+    ld a, (missileIndex)        ; this make you only allowed one missile 
+    cp 1
     jp z, missileUpdates
     
     ld a, 1
