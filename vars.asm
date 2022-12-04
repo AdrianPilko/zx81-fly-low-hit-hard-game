@@ -1,7 +1,7 @@
 ;our variables 
 
 groundLevelMemory
-DEFW   694,695,696,697,698,699,700,701,702,703,704,672,673,674,642,643,644,645,613,581,582,583,584,585,619,620,654,655,656,624,592,560
+DEFW   628,629,630,631,632,633,634,635,636,637,638,639,640,641,642,643,644,645,613,581,582,583,584,585,619,620,654,655,656,624,592,560
 ;; after the first ground is initialised then from there all drawing is from the last column so numbers are just offsets from D_FILE at the
 ;; last column vertical locations
 startOfNormalGround

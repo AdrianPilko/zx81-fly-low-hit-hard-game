@@ -30,7 +30,7 @@
 
 ;ship is made up of two blocks
 #define SHIP_CHARACTER_CODE 130   ; right facing corner  
-#define ENEMY_CHARACTER_CODE 6
+#define ENEMY_CHARACTER_CODE 129
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
 
