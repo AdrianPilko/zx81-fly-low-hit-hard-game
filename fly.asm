@@ -88,7 +88,8 @@ slowFrameCount_1      ; this is to control things that should only happen slower
 slowFrameCount_2      ; this is to control things that should only happen _even_ slower than the game loop 
                     ; like drawing a surface launched missile
     DEFB 0      
-    
+scoreText
+    DEFB    _S,_C,_O,_R,_E,$ff
 crash_message_txt
 	DEFB	_G,_A,_M,_E,__,_O,_V,_E,_R,$ff	
 title_screen_txt
@@ -348,7 +349,7 @@ mainGameLoop
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; scroll ground left           
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ld b, 22
+    ld b, 20
     ld hl,(D_FILE)          
     inc hl
     push hl
@@ -375,12 +376,16 @@ screenScrollLeftRowLoop
     ld (hl),a              
 
 printScoreInGame
-    ld b, 21		; b is row to print in
-    ld c, 1			; c is column
+    ld bc,661	
+    ld de,scoreText
+    call printstring		
+    
+    ld b, 20		; b is row to print in
+    ld c, 7			; c is column
     ld a, (score_mem_hund) ; load hundreds
     call printByte    
-    ld b, 21			; b is row to print in
-    ld c, 3			; c is column
+    ld b, 20			; b is row to print in
+    ld c, 9			; c is column
     ld a, (score_mem_tens) ; load tens		
     call printByte
    
@@ -429,7 +434,7 @@ zeroLastColumnLoop
 fillGroundToBottom
     and a
     or a
-    ld de,-725
+    ld de,-626
     add hl,de
     ld a, l
     cp 0  
@@ -447,11 +452,11 @@ fillGroundToBottomLoopExit
     pop hl ; clear stack (has to be equal push and pop or will blow
  
     ; force remove the bottom left character which is being shift (and is score shifted)
-    ld hl,(D_FILE) 
-    ld de, 694
-    add hl, de	
-    xor 0 
-    ld (hl),a 
+    ;ld hl,(D_FILE) 
+    ;ld de, 694
+    ;add hl, de	
+    ;xor 0 
+    ;ld (hl),a 
 
     ld hl,(numberOfGroundBlocksMoved)
     inc hl
@@ -607,7 +612,7 @@ fireMissile
     dec a
     ld (missileRowCounter), a
     ld a, 2                 ; start at column 2
-    ld (missileColCounter), a
+    ld (missileColCounter), a    
 
 missileUpdates
 ;; draw missiles currently in flight and update positions    
@@ -620,7 +625,7 @@ missileUpdates
     ; calculate the screen position to draw at and draw each, update after
     ld a, (missileOnOffState)
     cp 0
-    jp z, noUpdateForThisOne  
+    jp z, noUpdateForThisOne 
     
     ld a, (missileRowCounter)
     ld b, a        
@@ -632,7 +637,9 @@ loopCalcMissileScreenOffset
     djnz loopCalcMissileScreenOffset
     ld de, (missileColCounter)    ; now add the row  
     add hl, de
+    call debugPrintRegisters
     ld (missileCalculatedDisplayPos),hl  
+        
     ;we now should have the current offset to the display memory for the missile so draw on screen
              
     ; we need to check for collision with anything, if it has then, mark the missile for deletion later
@@ -656,7 +663,7 @@ loopCalcMissileScreenOffset
    
     jp skipPastMarkDelete    
 markForDeleteWithDec
-    dec hl
+    ;dec hl
 markForDelete 
     
     ld a, 1
@@ -664,7 +671,7 @@ markForDelete
     ;; so here we want to make it look like an explosion, lets use * :)
     ld a,23 ;; star for missile hit
     ld (hl),a        
-    jp loopBeforeEndMissileUpdate
+    jp loopBeforeEndMissileUpdate    
 skipPastMarkDelete    
     
     ld a,22 ;; minus sign symbol for missile        
@@ -690,13 +697,16 @@ tryAnotherR
     cp 10
     jp nc, tryAnotherR                  
     
-    ld a, (enemyStartRowPosition)
+    ld a, (enemyStartRowPosition)    
     ld b, a    
     ld hl, (D_FILE)
-    ld de, 32   
+    inc hl
+    ld de, 33
 calculateRowForEnemey
     add hl, de 
     djnz calculateRowForEnemey
+    ld de, 31       ; put them on last column
+    add hl, de
 
     ld a,ENEMY_CHARACTER_CODE     
     ld (hl),a     
@@ -732,6 +742,7 @@ skipAddHund
 
 preWaitloop    
     ld bc, $03ff
+    ;ld bc, $ffff   ; for debug long wait
 waitloop
 	dec bc
 	ld a,b
@@ -848,6 +859,61 @@ hprint 		;;http://swensont.epizy.com/ZX81Assembly.pdf?i=1
 	ADD A,$1C ; add 28 to the character code
 	CALL PRINT
 	RET
+
+debugPrintRegisters
+    ; take copy of all the registers
+    push hl
+    push de
+    push af    
+    push bc
+    
+    ; position the cursor
+    ;set b to row, c to first col, which is the last row
+    ld b, 21
+    ld c, 0    
+    call PRINTAT
+    pop bc
+    pop af
+    pop de
+    pop hl    
+    
+    push hl
+    push de
+    push af    
+    push bc
+    
+    ld a, a
+    call hprint    
+    ld a, 14
+    call PRINT  
+
+    ld a, h
+    call hprint    
+    ld a, l    
+    call hprint
+    ld a, 14
+    call PRINT
+       
+    ld a, d
+    call hprint
+    ld a, e
+    call hprint
+    ld a, 14
+    call PRINT
+
+    ld a, b
+    call hprint
+    ld a, c
+    call hprint    
+   
+   
+    ;restore registers (in correct reverse order!)        
+    pop bc
+    pop af
+    pop de
+    pop hl
+    
+    ret
     
     
 ;include our variables
