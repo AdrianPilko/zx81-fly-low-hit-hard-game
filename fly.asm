@@ -69,7 +69,7 @@ enemyStartRowPosition
 currentRowOffset    
     DEFB 0,0
 vertPosition    
-    DEFB 0,0
+    DEFB 0
 numberOfGroundBlocksMoved    
     DEFB 0,0
 missileColCounter      
@@ -750,12 +750,18 @@ noSkipAddSurfaceLaunched
     add hl, de    
     ld (hl),a
     ld (surfaceMissileCurrentPos),hl
-    
-    ld a, 19  
-    ;ld b, (vertPosition)
-    
+      
+    ld a, (vertPosition) 
+    push af ; ld b, (vertPosition) directly didn't work??!
+    pop bc
+    ld a, 19
+    ;call debugPrintRegisters
+    sub b   
+    inc a
+    inc a       ;; should put missile 2 about players position
     ld (surfaceMissileRowCountDown), a 
-   ; call debugPrintRegisters   
+    
+    
 
 checkIfTimeToAddEnemyShip
     ld a, (slowFrameCount_1)
