@@ -37,7 +37,7 @@
 #define SURFACE_MISSILE_SMOKE 8  ; grey block, shame no grey vertical bar!!
 #define MAX_MISSILES 1    ; currently set to one whilst we debug the code to fire missile
 #define SLOW_FRAME_RESET_THRESHOLD  4
-#define VERY_SLOW_FRAME_RESET_THRESHOLD  32
+#define VERY_SLOW_FRAME_RESET_THRESHOLD  27
 
 ; keyboard port for shift key to v
 #define KEYBOARD_READ_PORT_SHIFT_TO_V $FE
@@ -90,6 +90,13 @@ slowFrameCount_1      ; this is to control things that should only happen slower
 slowFrameCount_2      ; this is to control things that should only happen _even_ slower than the game loop 
                     ; like drawing a surface launched missile
     DEFB 0      
+    
+surfaceMissileInFlight  
+    DEFB 0      
+surfaceMissileCurrentPos
+    DEFB 0,0          
+surfaceMissileRowCountDown
+    DEFB 0
 scoreText
     DEFB    _S,_C,_O,_R,_E,$ff
 crash_message_txt
@@ -690,32 +697,62 @@ noUpdateForThisOne
    
 afterDrawUpDownFire
 
-;; surface launched missile 
+;;; check if missile in flight already, if so update
+    ld a, (surfaceMissileInFlight)
+    cp 0
+    jp z, checkSlowFrameCount_2
+
+    ;; check surface missile isn't at top of it's flight
+    ld a, (surfaceMissileRowCountDown)
+    dec a
+    cp 0
+    jp z, checkSlowFrameCount_2
+        
+    ld (surfaceMissileRowCountDown), a
+        
+    ld hl, (surfaceMissileCurrentPos)
+    ; replace current position minus 1 with smoke trail (because screen scroll)
+    ld a,SURFACE_MISSILE_SMOKE ;; grey block for smoke
+    dec hl     
+    ld (hl), a
+    inc hl
+    
+    ld de, -33  
+    add hl, de  ; add -33  gets round that you can't subtract 16bit !!
+    
+    ld a,SURFACE_MISSILE ;; vertical bar for missile
+    ld (hl),a
+    ld (surfaceMissileCurrentPos),hl  ; save new SAM position
+    ;call debugPrintRegisters
+        
+
+
+;; Launch Surface to Air Missile  (SAM), not good at tracking so only SAM 1, not SAM 2 :)
+checkSlowFrameCount_2
     ld a, (slowFrameCount_2)
     cp (VERY_SLOW_FRAME_RESET_THRESHOLD-1)
     jp z, noSkipAddSurfaceLaunched
-    jp checkIfTimeToAddEnemyShip
+    jp checkIfTimeToAddEnemyShip  
 
 noSkipAddSurfaceLaunched
     xor a
     ld (slowFrameCount_2),a  
+    ld a, 1
+    ld (surfaceMissileInFlight), a
     
-    ld a,SURFACE_MISSILE ;; minus sign symbol for missile
+    ld a,SURFACE_MISSILE ;; vertical bar for missile
+
+    ld de, 615  ; start SAM this position relative to D_FILE (of course); maybe later add random column    
     ld hl, (D_FILE)        
     inc hl
-    ld de, 148
-    add hl, de
-    ld (hl),a
-    ld a,SURFACE_MISSILE_SMOKE ;; minus sign symbol for missile
-    ld de, 33
-    ld bc, 10
-drawSurfaceLaunched    
     add hl, de    
     ld (hl),a
-    ;call debugPrintRegisters
-    djnz drawSurfaceLaunched
+    ld (surfaceMissileCurrentPos),hl
     
+    ld a, 18  
     
+    ld (surfaceMissileRowCountDown), a 
+   ; call debugPrintRegisters   
 
 checkIfTimeToAddEnemyShip
     ld a, (slowFrameCount_1)
