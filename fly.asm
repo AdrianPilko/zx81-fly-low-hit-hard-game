@@ -712,10 +712,12 @@ afterDrawUpDownFire
         
     ld hl, (surfaceMissileCurrentPos)
     ; replace current position minus 1 with smoke trail (because screen scroll)
-    ld a,SURFACE_MISSILE_SMOKE ;; grey block for smoke
+    ld a, 0 ; blank smoke
     dec hl     
     ld (hl), a
-    inc hl
+    
+    ld a,SURFACE_MISSILE_SMOKE ;; grey block for smoke
+    ld (hl), a
     
     ld de, -33  
     add hl, de  ; add -33  gets round that you can't subtract 16bit !!
@@ -749,7 +751,8 @@ noSkipAddSurfaceLaunched
     ld (hl),a
     ld (surfaceMissileCurrentPos),hl
     
-    ld a, 18  
+    ld a, 19  
+    ;ld b, (vertPosition)
     
     ld (surfaceMissileRowCountDown), a 
    ; call debugPrintRegisters   
