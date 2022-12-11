@@ -50,6 +50,10 @@
 
 	jp setHighScoreZero
 
+playersLives
+    DEFB 0
+livesText
+    DEFB _L,_I,_V,_E,_S,$ff
 var_ship_pos 
 	DEFB 0,0
 to_print_mem
@@ -119,6 +123,8 @@ title_screen_edge
 	DEFB	18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,$ff
 test_str		
 	DEFB	6,$ff			
+restartText    
+    DEFB    _G,_E,_T,__,_R,_E,_A,_D,_Y,__,__,_P,_L,_A,_Y,_E,_R,$ff
 missileFired    
     DEFB 0
 score_mem_tens
@@ -197,7 +203,6 @@ setHighScoreZero
     ld (high_score_mem_hund), a
     ld (last_score_mem_tens), a
     ld (last_score_mem_hund), a	
-	
 	
 intro_title
     call CLS	
@@ -279,13 +284,27 @@ dont_check_fire_button
     ld a, 1
     ld (var_keys_or_joystick), a   ; keys = 1
 main
-    call CLS
-
     xor a 						; initialise score to zero, and 0 results in a equal to zero
     ld (score_mem_tens),a	
     ld (score_mem_hund),a
     ld (score_mem_thou),a	    
+    ld a, 5
+    ld (playersLives), a	
+restartAfterLivesLost           ;; reset evverything except score and lives
+    call CLS
+    ld bc,335
+    ld de,restartText
+    call printstring	
 
+restartWaitLoop
+    ld bc,$ffff ;max waiting time
+restartWaitLoop_1
+    dec bc
+    ld a,b
+    or c
+    jp nz, restartWaitLoop_1
+    call CLS    
+    
     ld bc, $00ff					; set initial difficulty
     ld (speedUpLevelCounter), bc
        
@@ -398,6 +417,18 @@ printScoreInGame
     ld c, 9			; c is column
     ld a, (score_mem_tens) ; load tens		
     call printByte
+
+    ;;; print player lives
+    ld bc,673	
+    ld de,livesText
+    call printstring
+    ld b, 20		; b is row to print in
+    ld c, 18			; c is column
+    ld a, (playersLives)
+    call printByte  
+
+
+
    
     ld hl,(var_ship_pos) ; var_ship_pos already has the D_FILE offset added    
     ld a,SHIP_CHARACTER_CODE 
@@ -666,13 +697,13 @@ loopCalcMissileScreenOffset
     cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
     jp z, markForDelete
     
-    inc hl          ;; check what would be at the character in front of the current position as well
-    cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity    
-    jp z, markForDeleteWithDec 
-    cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
-    jp z, markForDeleteWithDec 
-    cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
-    jp z, markForDeleteWithDec
+    ;inc hl          ;; check what would be at the character in front of the current position as well
+    ;cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity    
+    ;jp z, markForDeleteWithDec 
+    ;cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
+    ;jp z, markForDeleteWithDec 
+    ;cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
+    ;jp z, markForDeleteWithDec
    
     jp skipPastMarkDelete    
 markForDeleteWithDec
@@ -798,8 +829,19 @@ skipAddEnemy
     inc hl
     ld a, (hl)
     cp 0
-	jp nz,gameover
-
+;	jp nz,gameover
+	jp nz,checkGameOver
+    jp skipCheckGameOver
+checkGameOver
+    ld a, (playersLives)    
+    dec a
+    cp 0
+    jp z, gameover
+    ld (playersLives), a
+    ; now reset game to start apart from initialising player live
+    jp restartAfterLivesLost
+    
+skipCheckGameOver
     ld a, (missileDeleteAfterNext)
     cp 0
     jp z,preWaitloop   ; we didn't get a hit so score still same
