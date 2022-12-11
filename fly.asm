@@ -863,7 +863,7 @@ addOneToHund
 skipAddHund	
 
 preWaitloop    
-    ld bc, $03ff
+    ld bc, $01ff
     ;ld bc, $ffff   ; for debug long wait
 waitloop
 	dec bc
