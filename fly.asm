@@ -696,8 +696,8 @@ loopCalcMissileScreenOffset
     cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity
     jp z, markForDelete 
     ld a,(hl)        
-    cp SURFACE_MISSILE_SMOKE    ;;the enemy character (should be #define really to aid readablity
-    jp z, markForDelete     
+    cp SURFACE_MISSILE_SMOKE    ;; allow player to shoot through the missile smoke, but will die if hits 
+    jp z, markForDelete         ;; will also die if hits the missile and cannot shoot that down!
     
     cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
     jp z, deleteMissileButNotGround 
@@ -745,8 +745,50 @@ afterDrawUpDownFire
     ld a, (surfaceMissileRowCountDown)
     dec a
     cp 0
-    jp z, checkSlowFrameCount_2
-        
+    jp z, explodeSurfaceMissile
+    
+    jp continueDrawSufaceMissile
+    ;; code to explode missile at end of it's flight
+explodeSurfaceMissile
+    ld hl, (surfaceMissileCurrentPos)
+    ; replace current position minus 1 with smoke trail (because screen scroll)
+    ld a, 0 ; blank smoke
+    dec hl     
+    ld (hl), a
+    
+    ld a,23   ;; star for missile explosion
+    
+    ld de, -33  
+    add hl, de  ; add -33  gets round that you can't subtract 16bit !!
+    ld (hl),a
+
+    ld de, 33  
+    add hl, de  ; add -33  gets round that you can't subtract 16bit !!
+    ld (hl),a
+
+    dec hl    
+    ld (hl),a
+    
+    inc hl    
+    ld (hl),a
+    
+    inc hl
+    ld (hl),a
+    dec hl
+    
+    ld de, 33  
+    add hl, de  ; add -33  gets round that you can't subtract 16bit !!
+    
+    ld a,23   ;; star for missile explosion
+    ld (hl),a
+    
+    ld a, 1
+    ld (surfaceMissileRowCountDown), a
+    ld a, 0
+    ld (surfaceMissileInFlight), a
+    jp checkSlowFrameCount_2    
+    
+continueDrawSufaceMissile        
     ld (surfaceMissileRowCountDown), a
         
     ld hl, (surfaceMissileCurrentPos)
@@ -764,10 +806,7 @@ afterDrawUpDownFire
     ld a,SURFACE_MISSILE ;; vertical bar for missile
     ld (hl),a
     ld (surfaceMissileCurrentPos),hl  ; save new SAM position
-    ;call debugPrintRegisters
-        
-
-
+    
 ;; Launch Surface to Air Missile  (SAM), not good at tracking so only SAM 1, not SAM 2 :)
 checkSlowFrameCount_2
     ld a, (slowFrameCount_2)
@@ -794,10 +833,7 @@ noSkipAddSurfaceLaunched
     push af ; ld b, (vertPosition) directly didn't work??!
     pop bc
     ld a, 19
-    ;call debugPrintRegisters
-    sub b   
-    inc a
-    inc a       ;; should put missile 2 about players position
+    sub b       
     ld (surfaceMissileRowCountDown), a 
     
     
@@ -874,7 +910,7 @@ addOneToHund
 skipAddHund	
 
 preWaitloop    
-    ld bc, $02ff
+    ld bc, $02ff   ; slightly slower for testing game functionality
    ; ld bc, $01ff
     ;ld bc, $ffff   ; for debug long wait
 waitloop
