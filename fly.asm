@@ -96,7 +96,8 @@ slowFrameCount_1      ; this is to control things that should only happen slower
 slowFrameCount_2      ; this is to control things that should only happen _even_ slower than the game loop 
                     ; like drawing a surface launched missile
     DEFB 0      
-    
+groundResetCountDown
+    DEFB 0
 surfaceMissileInFlight  
     DEFB 0      
 surfaceMissileCurrentPos
@@ -126,7 +127,11 @@ title_screen_edge
 test_str		
 	DEFB	6,$ff			
 restartText    
-    DEFB    _G,_E,_T,__,_R,_E,_A,_D,_Y,__,__,_P,_L,_A,_Y,_E,_R,$ff
+    DEFB    _G,_E,_T,__,_R,_E,_A,_D,_Y,__,_P,_L,_A,_Y,_E,_R,__,_1,$ff    
+wonTheGameText_1    
+    DEFB	18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,$ff
+wonTheGameText_2        
+    DEFB    _Y,_O,_U,__,_W,_I,_N,__,_A,_N,_D,__,_A,_R,_E,__,_T,_H,_E,__,_B,_E,_S,_T,__,_P,_I,_L,_O,_T,$ff        
 missileFired    
     DEFB 0
 score_mem_tens
@@ -285,6 +290,7 @@ dont_check_fire_button
     ; this means that they pressed  s to start so only use keys
     ld a, 1
     ld (var_keys_or_joystick), a   ; keys = 1
+    
 main
     xor a 						; initialise score to zero, and 0 results in a equal to zero
     ld (score_mem_tens),a	
@@ -293,6 +299,9 @@ main
     ld (hitEnemy), a
     ld a, 5
     ld (playersLives), a	
+    
+    ld a, 5
+    ld (groundResetCountDown), a  ;; wrap arounds to complete level
 restartAfterLivesLost           ;; reset evverything except score and lives
     call CLS
     ld bc,335
@@ -495,19 +504,13 @@ fillGroundToBottom
 fillGroundToBottomLoopExit
     pop hl ; clear stack (has to be equal push and pop or will blow
  
-    ; force remove the bottom left character which is being shift (and is score shifted)
-    ;ld hl,(D_FILE) 
-    ;ld de, 694
-    ;add hl, de	
-    ;xor 0 
-    ;ld (hl),a 
-
     ld hl,(numberOfGroundBlocksMoved)
     inc hl
     ld (numberOfGroundBlocksMoved), hl
     and a   
     or a          
-    ld de,-320    ;; neat way of checking if a 16bit limit reached load negative constant then add and check "no carry"
+    ;ld de,-320    ;; neat way of checking if a 16bit limit reached load negative constant then add and check "no carry"
+    ld de,-608    ;; neat way of checking if a 16bit limit reached load negative constant then add and check "no carry"
     add hl,de    
     jp nc,afterCheckingGroundIndex
 
@@ -519,6 +522,12 @@ resetGound
 
     ld de, startOfNormalGround    
     ld (groundLevelMemoryLocationNow), de
+    
+    ld a, (groundResetCountDown)
+    dec a
+    cp 0
+    jp z, endOfLevel
+    
 
 afterCheckingGroundIndex      
     
@@ -725,7 +734,7 @@ markForDelete
     jp loopBeforeEndMissileUpdate    
 skipPastMarkDelete    
     
-    ld a,22 ;; minus sign symbol for missile        
+    ld a, 4 ;; was minus sign symbol for missile , now smal block
     ld (hl),a        
 
    
@@ -873,7 +882,7 @@ skipAddEnemy
     inc hl
     ld a, (hl)
     cp 0
-;	jp nz,gameover
+
 	jp nz,checkGameOver
     jp skipCheckGameOver
 checkGameOver
@@ -910,9 +919,10 @@ addOneToHund
 skipAddHund	
 
 preWaitloop    
-    ld bc, $02ff   ; slightly slower for testing game functionality
-   ; ld bc, $01ff
+    ;ld bc, $02ff   ; slightly slower for testing game functionality
+    ld bc, $01ff
     ;ld bc, $ffff   ; for debug long wait
+     ;ld bc, $000f   ; fastest in testing
 waitloop
 	dec bc
 	ld a,b
@@ -932,15 +942,11 @@ waitloop
     ld (hl),a    
     inc hl
     ld (hl),a    
-    
-  
-    
-    
 
     ; this is the code that actually moves the missile accross the screen
     ld a, (missileColCounter)
     inc a    
-    cp 31
+    cp 17 ; missile range limit to 17
     jp z, disableMissile   
     ld (missileColCounter), a
     
@@ -1007,7 +1013,58 @@ waitLoopEndGame
 
     ret  ; never return to basic, but will never get here
 
-; original game written by Jon Kingsman, for zx spectrum, ZX81 port/rework by Adrian Pilkington 
+endOfLevel
+    call CLS
+    ld bc,232
+    ld de, wonTheGameText_1    
+    call printstring
+
+    ld bc,265
+    ld de, wonTheGameText_1
+    call printstring
+    
+    ld bc,332
+    ld de, wonTheGameText_2
+    call printstring
+
+    ld bc,397
+    ld de, wonTheGameText_1
+    call printstring    
+    ld bc,430
+    ld de, wonTheGameText_1    
+    call printstring
+    
+    ld bc, $ffff   ;; wait max time for 16bits then go back to intro	    
+waitLoopEndOfLevel
+    dec bc
+    push bc
+    ld bc, $000f   ;; wait max time for 16bits then go back to intro	    
+waitLoopEndOfLevelInner
+    dec bc
+    ld a,b
+    or c    
+    jp nz, waitLoopEndOfLevelInner
+
+    pop bc
+    ld a,b
+    or c    
+    jp nz, waitLoopEndOfLevel
+    ;; bonus + 500 score
+    ld a, 0
+    ld (score_mem_tens), a
+    ld a, (score_mem_hund)
+    add a, 5
+    daa
+    ld (score_mem_hund), a    
+
+	ld a, (score_mem_tens) ; load tens		
+	ld (last_score_mem_tens),a 
+	ld a, (score_mem_hund) ; load tens		
+	ld (last_score_mem_hund),a	
+    
+    jp intro_title
+
+
 
 
 ; this prints at top any offset (stored in bc) from the top of the screen D_FILE
