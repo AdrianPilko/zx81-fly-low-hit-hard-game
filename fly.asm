@@ -54,6 +54,8 @@ playersLives
     DEFB 0
 livesText
     DEFB _L,_I,_V,_E,_S,$ff
+hitEnemy
+    DEFB 0
 var_ship_pos 
 	DEFB 0,0
 to_print_mem
@@ -288,6 +290,7 @@ main
     ld (score_mem_tens),a	
     ld (score_mem_hund),a
     ld (score_mem_thou),a	    
+    ld (hitEnemy), a
     ld a, 5
     ld (playersLives), a	
 restartAfterLivesLost           ;; reset evverything except score and lives
@@ -692,26 +695,30 @@ loopCalcMissileScreenOffset
     ld a,(hl)        
     cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity
     jp z, markForDelete 
-    cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
-    jp z, markForDelete 
-    cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
-    jp z, markForDelete
+    ld a,(hl)        
+    cp SURFACE_MISSILE_SMOKE    ;;the enemy character (should be #define really to aid readablity
+    jp z, markForDelete     
     
-    ;inc hl          ;; check what would be at the character in front of the current position as well
-    ;cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity    
-    ;jp z, markForDeleteWithDec 
-    ;cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
-    ;jp z, markForDeleteWithDec 
-    ;cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
-    ;jp z, markForDeleteWithDec
-   
+    cp GROUND_CHARACTER_CODE   ;; check the ground as well (both types :)
+    jp z, deleteMissileButNotGround 
+    cp GROUND_CHARACTER_CODE_2     ;; check the ground as well (both types :)
+    jp z, deleteMissileButNotGround
+    
     jp skipPastMarkDelete    
-markForDeleteWithDec
-    ;dec hl
+    
+deleteMissileButNotGround
+    ld a, 1
+    ld (missileDeleteAfterNext), a
+    xor a
+    ld (missileIndex),a
+    ld (missileOnOffState),a 
+    ld (missileDeleteAfterNext), a  
+    jp loopBeforeEndMissileUpdate  
 markForDelete 
     
     ld a, 1
     ld (missileDeleteAfterNext), a
+    ld (hitEnemy), a
     ;; so here we want to make it look like an explosion, lets use * :)
     ld a,23 ;; star for missile hit
     ld (hl),a        
@@ -720,7 +727,8 @@ skipPastMarkDelete
     
     ld a,22 ;; minus sign symbol for missile        
     ld (hl),a        
-    
+
+   
 loopBeforeEndMissileUpdate   
 noUpdateForThisOne
     ;pop bc
@@ -842,9 +850,12 @@ checkGameOver
     jp restartAfterLivesLost
     
 skipCheckGameOver
-    ld a, (missileDeleteAfterNext)
+    ld a, (hitEnemy)
     cp 0
     jp z,preWaitloop   ; we didn't get a hit so score still same
+    
+    xor a
+    ld (hitEnemy), a
     
     ld a,(score_mem_tens)				   ;;; need to check for kills and then add one to score
     add a,1	
@@ -863,7 +874,8 @@ addOneToHund
 skipAddHund	
 
 preWaitloop    
-    ld bc, $01ff
+    ld bc, $02ff
+   ; ld bc, $01ff
     ;ld bc, $ffff   ; for debug long wait
 waitloop
 	dec bc
