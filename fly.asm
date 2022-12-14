@@ -808,10 +808,21 @@ continueDrawSufaceMissile
     
     ld a,SURFACE_MISSILE_SMOKE ;; grey block for smoke
     ld (hl), a
+    ld a,0 ;; blank previous smoke - 2    
+    ld de, 33  
+    add hl, de      
+    add hl, de  
+    add hl, de  
+    ld (hl), a
     
-    ld de, -33  
+    ld (hl), a
+
+    
+    ld de, -33  ; bit clunky but add -33 to move back to one about previous location
     add hl, de  ; add -33  gets round that you can't subtract 16bit !!
-    
+    add hl, de  ; add -33  gets round that you can't subtract 16bit !!
+    add hl, de  ; add -33  gets round that you can't subtract 16bit !!
+    add hl, de  
     ld a,SURFACE_MISSILE ;; vertical bar for missile
     ld (hl),a
     ld (surfaceMissileCurrentPos),hl  ; save new SAM position
@@ -919,8 +930,8 @@ addOneToHund
 skipAddHund	
 
 preWaitloop    
-    ;ld bc, $02ff   ; slightly slower for testing game functionality
-    ld bc, $01ff
+    ld bc, $03ff   ; slightly slower for testing game functionality
+    ;ld bc, $01ff
     ;ld bc, $ffff   ; for debug long wait
      ;ld bc, $000f   ; fastest in testing
 waitloop
