@@ -104,6 +104,8 @@ surfaceMissileCurrentPos
     DEFB 0,0          
 surfaceMissileRowCountDown
     DEFB 0
+launchDetected
+    DEFB 0
 scoreText
     DEFB    _S,_C,_O,_R,_E,$ff
 crash_message_txt
@@ -132,6 +134,10 @@ wonTheGameText_1
     DEFB	18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,18,19,$ff
 wonTheGameText_2        
     DEFB    _Y,_O,_U,__,_W,_I,_N,__,_A,_N,_D,__,_A,_R,_E,__,_T,_H,_E,__,_B,_E,_S,_T,__,_P,_I,_L,_O,_T,$ff        
+SAMLaunchText    
+    DEFB    _W,_R,_R,_N,_I,_N,_G,__,_S,_A,_M,__,_L,_A,_U,_N,_C,_H,__,_D,_E,_T,_E,_C,_T,_E,_D,$ff        
+BlankSAMLaunchText
+    DEFB    __,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,__,$ff        
 missileFired    
     DEFB 0
 score_mem_tens
@@ -297,11 +303,11 @@ main
     ld (score_mem_hund),a
     ld (score_mem_thou),a	    
     ld (hitEnemy), a
-    ld a, 5
+    ld (launchDetected), a
+    ld a, 5    
     ld (playersLives), a	
-    
-    ld a, 5
-    ld (groundResetCountDown), a  ;; wrap arounds to complete level
+    ld (groundResetCountDown), a  ;; wrap arounds to complete level    
+
 restartAfterLivesLost           ;; reset evverything except score and lives
     call CLS
     ld bc,335
@@ -745,6 +751,16 @@ noUpdateForThisOne
    
 afterDrawUpDownFire
 
+    ld a, (launchDetected)
+    cp 1
+    jp nz,checkSurfaceMissile 
+    
+    ld bc,694
+    ld de,SAMLaunchText
+    call printstring		
+    
+
+checkSurfaceMissile
 ;;; check if missile in flight already, if so update
     ld a, (surfaceMissileInFlight)
     cp 0
@@ -759,6 +775,10 @@ afterDrawUpDownFire
     jp continueDrawSufaceMissile
     ;; code to explode missile at end of it's flight
 explodeSurfaceMissile
+    ld bc,694
+    ld de,BlankSAMLaunchText
+    call printstring		
+    
     ld hl, (surfaceMissileCurrentPos)
     ; replace current position minus 1 with smoke trail (because screen scroll)
     ld a, 0 ; blank smoke
@@ -795,6 +815,7 @@ explodeSurfaceMissile
     ld (surfaceMissileRowCountDown), a
     ld a, 0
     ld (surfaceMissileInFlight), a
+    ld (launchDetected), a
     jp checkSlowFrameCount_2    
     
 continueDrawSufaceMissile        
@@ -855,7 +876,8 @@ noSkipAddSurfaceLaunched
     ld a, 19
     sub b       
     ld (surfaceMissileRowCountDown), a 
-    
+    ld a,1
+    ld (launchDetected),a
     
 
 checkIfTimeToAddEnemyShip
@@ -893,8 +915,8 @@ skipAddEnemy
     inc hl
     ld a, (hl)
     cp 0
-
 	jp nz,checkGameOver
+    
     jp skipCheckGameOver
 checkGameOver
     ld a, (playersLives)    
@@ -927,10 +949,14 @@ addOneToHund
     add a, 1
     daa
     ld (score_mem_hund), a
+    ;; if by a stroke of luck the player gets to 100 then add a life
+    ld a, (playersLives)
+    inc a
+    ld (playersLives), a 
 skipAddHund	
 
 preWaitloop    
-    ld bc, $03ff   ; slightly slower for testing game functionality
+    ld bc, $02ef   ; slightly slower for testing game functionality
     ;ld bc, $01ff
     ;ld bc, $ffff   ; for debug long wait
      ;ld bc, $000f   ; fastest in testing
