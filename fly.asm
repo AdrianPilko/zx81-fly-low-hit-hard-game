@@ -30,8 +30,14 @@
 
 ;ship is made up of two blocks
 #define SHIP_CHARACTER_CODE 130   ; right facing corner  
-#define ENEMY_CHARACTER_CODE 129
-#define SPECIAL_ENEMY_CHARACTER_CODE 137
+#define ENEMY_CHARACTER_CODE_1   128 
+#define ENEMY_CHARACTER_CODE_2   136 
+#define ENEMY_CHARACTER_CODE_3   129 
+#define ENEMY_CHARACTER_CODE_4   132 
+ 
+#define SPECIAL_ENEMY_CHARACTER_CODE_1 137
+#define SPECIAL_ENEMY_CHARACTER_CODE_2 134
+#define SPECIAL_ENEMY_CHARACTER_CODE_3 135
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
 #define SURFACE_MISSILE 5  ; vertical bar
@@ -716,8 +722,20 @@ loopCalcMissileScreenOffset
     
     ;; another instance of collision detection
     ld a,(hl)        
-    cp ENEMY_CHARACTER_CODE    ;;the enemy character (should be #define really to aid readablity
+    cp ENEMY_CHARACTER_CODE_1    ;;the enemy character (should be #define really to aid readablity
     jp z, markForDelete 
+    cp ENEMY_CHARACTER_CODE_2    ;;the enemy character (should be #define really to aid readablity
+    jp z, markForDelete 
+    cp ENEMY_CHARACTER_CODE_3    ;;the enemy character (should be #define really to aid readablity
+    jp z, markForDelete 
+    cp ENEMY_CHARACTER_CODE_4    ;;the enemy character (should be #define really to aid readablity
+    jp z, markForDelete 
+    cp SPECIAL_ENEMY_CHARACTER_CODE_1    ;;the enemy character (should be #define really to aid readablity        
+    jp z, markForDelete 
+    cp SPECIAL_ENEMY_CHARACTER_CODE_2    ;;the enemy character (should be #define really to aid readablity        
+    jp z, markForDelete 
+    cp SPECIAL_ENEMY_CHARACTER_CODE_3    ;;the enemy character (should be #define really to aid readablity        
+    jp z, markForDelete     
     ld a,(hl)        
     cp SURFACE_MISSILE_SMOKE    ;; allow player to shoot through the missile smoke, but will die if hits 
     jp z, markForDelete         ;; will also die if hits the missile and cannot shoot that down!
@@ -940,7 +958,7 @@ calculateRowForSpecEnemey
     ;ld (specialEnemyColumn), a    
     ld (specialEnemyNowPos), hl
     ; so if we have a none zero special enemy (the store start position in specialEnemyNow)
-    ld a,SPECIAL_ENEMY_CHARACTER_CODE     
+    ld a,SPECIAL_ENEMY_CHARACTER_CODE_1     
     
     ld (hl),a       ;; make the special enemy a bigger block
     dec hl
@@ -951,9 +969,9 @@ calculateRowForSpecEnemey
     
     ld de, 33    
     add hl, de
-    ld a, 134    
+    ld a, SPECIAL_ENEMY_CHARACTER_CODE_2        
     ld (hl),a     
-    ld a,SPECIAL_ENEMY_CHARACTER_CODE+1     
+    ld a,SPECIAL_ENEMY_CHARACTER_CODE_3     
     inc hl
     ld (hl),a
     inc hl
@@ -967,24 +985,24 @@ justAddEnemy
     ;ld a,ENEMY_CHARACTER_CODE     
     ;ld (hl),a     
     
-    ld a,128     
+    ld a,ENEMY_CHARACTER_CODE_1     
     
     ld (hl),a       ;; make the special enemy a bigger block
     dec hl
-    ld a,136
+    ld a,ENEMY_CHARACTER_CODE_2
     ld (hl),a     
     dec hl
-    ld a, 129
+    ld a, ENEMY_CHARACTER_CODE_3
     ld (hl),a     
     
     ld de, 33    
     add hl, de
-    ld a, 132    
+    ld a, ENEMY_CHARACTER_CODE_4    
     ld (hl),a     
-    ld a,128
+    ld a,ENEMY_CHARACTER_CODE_1
     inc hl
     ld (hl),a
-    ld a,136
+    ld a,ENEMY_CHARACTER_CODE_2
     inc hl
     ld (hl),a    
 
@@ -1048,7 +1066,7 @@ waitloop
 	jp nz, waitloop
     
 ;;; clear missile (mainly to prevent it "shooting" own ship down)
-;;; only if missile fire flag set    
+;;; only if missile fire flag set    7
 
     ld a, (missileIndex)
     cp 1
