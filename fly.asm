@@ -37,7 +37,8 @@
  
 #define SPECIAL_ENEMY_CHARACTER_CODE_1 137
 #define SPECIAL_ENEMY_CHARACTER_CODE_2 134
-#define SPECIAL_ENEMY_CHARACTER_CODE_3 135
+#define SPECIAL_ENEMY_CHARACTER_CODE_3 138
+#define SPECIAL_ENEMY_CHARACTER_CODE_4 6
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
 #define SURFACE_MISSILE 5  ; vertical bar
@@ -736,6 +737,9 @@ loopCalcMissileScreenOffset
     jp z, markForDelete 
     cp SPECIAL_ENEMY_CHARACTER_CODE_3    ;;the enemy character (should be #define really to aid readablity        
     jp z, markForDelete     
+    cp SPECIAL_ENEMY_CHARACTER_CODE_4    ;;the enemy character (should be #define really to aid readablity        
+    jp z, markForDelete     
+    
     ld a,(hl)        
     cp SURFACE_MISSILE_SMOKE    ;; allow player to shoot through the missile smoke, but will die if hits 
     jp z, markForDelete         ;; will also die if hits the missile and cannot shoot that down!
@@ -964,7 +968,7 @@ calculateRowForSpecEnemey
     dec hl
     ld (hl),a     
     dec hl
-    ld a, 6
+    ld a, SPECIAL_ENEMY_CHARACTER_CODE_4
     ld (hl),a     
     
     ld de, 33    
