@@ -31,12 +31,13 @@
 ;ship is made up of two blocks
 #define SHIP_CHARACTER_CODE 130   ; right facing corner  
 #define ENEMY_CHARACTER_CODE 129
+#define SPECIAL_ENEMY_CHARACTER_CODE 137
 #define GROUND_CHARACTER_CODE 61
 #define GROUND_CHARACTER_CODE_2 189
 #define SURFACE_MISSILE 5  ; vertical bar
 #define SURFACE_MISSILE_SMOKE 8  ; grey block, shame no grey vertical bar!!
 #define MAX_MISSILES 1    ; currently set to one whilst we debug the code to fire missile
-#define SLOW_FRAME_RESET_THRESHOLD  4
+#define SLOW_FRAME_RESET_THRESHOLD  11
 #define VERY_SLOW_FRAME_RESET_THRESHOLD  27
 
 ; keyboard port for shift key to v
@@ -106,6 +107,12 @@ surfaceMissileRowCountDown
     DEFB 0
 launchDetected
     DEFB 0
+specialEnemyNow
+    DEFB 0
+byteAlign
+    DEFB 0    
+specialEnemyNowPos
+    DEFB 0,0
 scoreText
     DEFB    _S,_C,_O,_R,_E,$ff
 crash_message_txt
@@ -313,6 +320,7 @@ restartAfterLivesLost           ;; reset evverything except score and lives
     ld bc,335
     ld de,restartText
     call printstring	
+    xor a
 
 restartWaitLoop
     ld bc,$ffff ;max waiting time
@@ -856,6 +864,9 @@ checkSlowFrameCount_2
     jp checkIfTimeToAddEnemyShip  
 
 noSkipAddSurfaceLaunched
+    ld a, 1
+    ld (specialEnemyNow), a
+    
     xor a
     ld (slowFrameCount_2),a  
     ld a, 1
@@ -893,20 +904,89 @@ tryAnotherR
     ld (enemyStartRowPosition), a
     cp 10
     jp nc, tryAnotherR                  
+
+    ld a,(specialEnemyNow)    
+    cp 0
+    jp z, justCalcNormalEnemyRow
+    ld a, (vertPosition)
     
+    jp addSpecialEnemy
+    
+justCalcNormalEnemyRow
     ld a, (enemyStartRowPosition)    
     ld b, a    
     ld hl, (D_FILE)
-    inc hl
     ld de, 33
 calculateRowForEnemey
     add hl, de 
     djnz calculateRowForEnemey
     ld de, 31       ; put them on last column
     add hl, de
-
-    ld a,ENEMY_CHARACTER_CODE     
+    jp justAddEnemy
+    
+addSpecialEnemy        
+    ld b, a    
+    ld hl, (D_FILE)
+    ld de, 33
+calculateRowForSpecEnemey
+    add hl, de 
+    djnz calculateRowForSpecEnemey
+    ld de, 31       ; put them on last column
+    add hl, de
+        
+    xor a
+    ld (specialEnemyNow), a
+    ;ld a, 30
+    ;ld (specialEnemyColumn), a    
+    ld (specialEnemyNowPos), hl
+    ; so if we have a none zero special enemy (the store start position in specialEnemyNow)
+    ld a,SPECIAL_ENEMY_CHARACTER_CODE     
+    
+    ld (hl),a       ;; make the special enemy a bigger block
+    dec hl
     ld (hl),a     
+    dec hl
+    ld a, 6
+    ld (hl),a     
+    
+    ld de, 33    
+    add hl, de
+    ld a, 134    
+    ld (hl),a     
+    ld a,SPECIAL_ENEMY_CHARACTER_CODE+1     
+    inc hl
+    ld (hl),a
+    inc hl
+    ld (hl),a
+    
+    ;call debugPrintRegisters
+    ;ret
+    jp skipAddEnemy
+    
+justAddEnemy
+    ;ld a,ENEMY_CHARACTER_CODE     
+    ;ld (hl),a     
+    
+    ld a,128     
+    
+    ld (hl),a       ;; make the special enemy a bigger block
+    dec hl
+    ld a,136
+    ld (hl),a     
+    dec hl
+    ld a, 129
+    ld (hl),a     
+    
+    ld de, 33    
+    add hl, de
+    ld a, 132    
+    ld (hl),a     
+    ld a,128
+    inc hl
+    ld (hl),a
+    ld a,136
+    inc hl
+    ld (hl),a    
 
 skipAddEnemy
 
@@ -916,6 +996,7 @@ skipAddEnemy
     ld a, (hl)
     cp 0
 	jp nz,checkGameOver
+
     
     jp skipCheckGameOver
 checkGameOver
@@ -956,7 +1037,7 @@ addOneToHund
 skipAddHund	
 
 preWaitloop    
-    ld bc, $02ef   ; slightly slower for testing game functionality
+    ld bc, $01ff   ; slightly slower for testing game functionality
     ;ld bc, $01ff
     ;ld bc, $ffff   ; for debug long wait
      ;ld bc, $000f   ; fastest in testing
@@ -1018,12 +1099,13 @@ zeroslowFrameCount_1
     cp VERY_SLOW_FRAME_RESET_THRESHOLD
     jp z, zeroslowFrameCount_2
     
-    ld (slowFrameCount_2),a          
+    ld (slowFrameCount_2),a   
+    
     jp mainGameLoop
     
 zeroslowFrameCount_2
     xor a
-    ld (slowFrameCount_2),a          
+    ld (slowFrameCount_2),a
 	jp mainGameLoop
     
 gameover
