@@ -175,6 +175,7 @@ credits_and_version_2
 var_keys_or_joystick
 	DEFB 0,0
 to_print .equ to_print_mem ;use printByte16
+VSYNCLOOP     .equ      5
 
 ;; note on the zx81 display 
 ; from previous crashes and experimenting with printing characters to the screen;; 
@@ -312,6 +313,12 @@ dont_check_fire_button
     ld (var_keys_or_joystick), a   ; keys = 1
     
 main
+
+	ld b,VSYNCLOOP
+waitForTVSync	
+	call vsync
+	djnz waitForTVSync
+
     xor a 						; initialise score to zero, and 0 results in a equal to zero
     ld (score_mem_tens),a	
     ld (score_mem_hund),a
@@ -1059,8 +1066,8 @@ addOneToHund
 skipAddHund	
 
 preWaitloop    
-    ld bc, $01ff   ; slightly slower for testing game functionality
     ;ld bc, $01ff
+    ld bc, $00bf
     ;ld bc, $ffff   ; for debug long wait
      ;ld bc, $000f   ; fastest in testing
 waitloop
@@ -1205,6 +1212,15 @@ waitLoopEndOfLevelInner
     
     jp intro_title
 
+;check if TV synchro (FRAMES) happend
+vsync	
+	ld a,(FRAMES)
+	ld c,a
+sync
+	ld a,(FRAMES)
+	cp c
+	jr z,sync
+	ret
 
 
 
