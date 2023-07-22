@@ -553,6 +553,7 @@ resetGound
     
     ld a, (groundResetCountDown)
     dec a
+    ld (groundResetCountDown), a
     cp 0
     jp z, endOfLevel
     
