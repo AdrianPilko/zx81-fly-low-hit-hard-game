@@ -785,9 +785,7 @@ skipPastMarkDelete
    
 loopBeforeEndMissileUpdate   
 noUpdateForThisOne
-    ;pop bc
-    ;djnz missileUpdateLoop
-   
+  
 afterDrawUpDownFire
 
     ld a, (launchDetected)
