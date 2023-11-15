@@ -371,7 +371,7 @@ initialiseGround
     ;; thing that register "de" points to, but due to limits of z80, 
     ;; have to use register indirect via two ld a, (de) !!!
     ;; unless I'm missing something!! :-/
-    ld de, (groundLevelMemoryLocationNow)
+    ld de, (groundLevelMemoryLocationNow)    
     ld a,(de)      
     ld l, a        
     inc de         
@@ -380,10 +380,8 @@ initialiseGround
     inc de   ; increment again to get to the next location
     ld (groundLevelMemoryLocationNow), de
 
-    push hl         ;; you can't just do "ld hl, de", that instruction doesn't exist, 
-    ;; would be too easy, so have to use stack "push and pop"
-    pop de
-
+    ex de, hl         ;; optimised from push hl ; pop de 21clock cycles to  register exhange, 4clock cycles!!!   
+    
     ld hl,(D_FILE) 
 
     add hl,de       ;; add the start of display memory to the offset 
@@ -500,9 +498,12 @@ zeroLastColumnLoop
     inc de   ; increment again to get to the next location
     ld (groundLevelMemoryLocationNow), de
 
-    push hl         ;; you can't just do "ld hl, de", that instruction doesn't exist, 
-                    ;; would be too easy, so have to use stack "push and pop"
-    pop de
+    ex de, hl         ;; optimised from push hl ; pop de 21clock cycles to register exhange, 4clock cycles!!!
+    
+    ;ld de, (groundLevelMemoryLocationNow)
+    ;inc de
+    ;inc de
+    ;ld (groundLevelMemoryLocationNow), de
 
     ld hl,(D_FILE) 
 
